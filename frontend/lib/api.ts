@@ -521,6 +521,15 @@ export const fetchConflictChecks = (caseId: number) =>
   api<ConflictCheck[]>(`/conflict/cases/${caseId}/checks`);
 
 /** 放行必须写理由；放行时可顺带设隔离墙 */
+/** 这次利冲该谁处置 —— 前端据此显示按钮和提示，不写死 */
+export type ConflictWho = {
+  required_perm: string;
+  who: string;
+  can_i: boolean;
+};
+export const fetchConflictWho = (checkId: number) =>
+  api<ConflictWho>(`/conflict/checks/${checkId}/who`);
+
 export const decideConflict = (checkId: number, body: {
   status: "waived" | "blocked";
   note: string;

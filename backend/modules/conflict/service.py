@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Sequence, Set
 
@@ -29,6 +30,8 @@ from sqlalchemy.orm import Session
 
 from kernel.errors import DomainError, NotFound
 from kernel.registry import registry
+logger = logging.getLogger(__name__)
+
 from modules.conflict.models import (
     CHECK_STATUSES,
     HIT_KINDS,
@@ -102,6 +105,15 @@ def run_check(
     check.status = _conclude(hits)
     if check.status == "cleared":
         check.decided_at = datetime.now(timezone.utc)
+        # ★★ **无冲突的直接把案件推到「待立案」。**
+        #
+        #   这是那个洞的另一半：`cleared` 连"处置"这个动作都没有
+        #   （`decide` 会拒："本次检查无冲突，无需处置"）——
+        #   于是**最顺利的那条路反而最容易卡住**：
+        #   跑完利冲、干干净净没命中，案件却还在草稿，
+        #   而律师觉得"我明明查过了"。
+        _advance_case_after_pass(session, case_id, requested_by)
+
     session.flush()
     # EVENT: conflict.checked
     return check
@@ -199,6 +211,54 @@ def _conclude(hits: Sequence[ConflictHit]) -> str:
     return "cleared"
 
 
+# ---------------------------------------------------------------- 谁能拍板
+
+
+def required_perm(session: Session, check_id: int) -> str:
+    """处置这次检查需要什么权限 —— **看最高命中等级，分两级**。
+
+    ★ 原来只有一档：所有命中都要 `conflict.decide`（管委会）。
+      问题是**管委会在中国律所不是天天在线的审批岗，是开会的机构**。
+      把"关联方在别的案子里出现过"这种也推给它，结果是管委会待办里
+      堆满本该秒过的东西，然后养成"全点放行"的习惯 ——
+      **这道闸就废了**。
+
+    ★ 分级依据用现成的命中等级（`HIT_LEVELS`），不另造一套：
+
+          blocked   对方就是我所现有客户    → **管委会**（conflict.decide）
+          review    关联方/旧客户，要看一眼  → **风控或主任**（conflict.review）
+          notice    仅记录                  → 不需要处置
+
+    ★ 有 `decide` 的人自然也能处理 `review`（权限是包含关系），
+      反过来不行 —— 真冲突必须上管委会，这是执业红线。
+    """
+    check = get_check(session, check_id)
+    hits = hits_of(session, check_id)
+    if any(h.level == "blocked" for h in hits) or check.status == "blocked":
+        return "conflict.decide"
+    return "conflict.review"
+
+
+def assert_can_decide(session: Session, principal, check_id: int) -> None:
+    """处置前的权限检查。**报错要说清该找谁**。"""
+    need = required_perm(session, check_id)
+    if principal.can(need):
+        return
+    # decide 是 review 的超集
+    if need == "conflict.review" and principal.can("conflict.decide"):
+        return
+    who = "管委会" if need == "conflict.decide" else "风控或主任"
+    raise DomainError(
+        "这次利冲要{0}处置（需要 {1} 权限）。\n"
+        "{2}".format(
+            who, need,
+            "本案命中了「对方是我方客户」这类硬冲突 —— 必须上管委会。"
+            if need == "conflict.decide"
+            else "命中的是关联方/旧关系，风控或主任看一眼就能定。"),
+        code="conflict.cannot_decide",
+    )
+
+
 # ---------------------------------------------------------------- 处置
 
 
@@ -258,9 +318,52 @@ def decide(
                 int(wall["user_id"]), mode=wall.get("mode", "deny"),
                 reason=wall.get("reason", "利冲隔离"), created_by=decided_by,
             )
+    # ★★ **放行之后把案件往前推一步。**
+    #
+    #   这是踩出来的：用户跑完利冲、点了放行、办案流程也走完了，
+    #   案件却一直显示「草稿」—— 因为**利冲、流程、案件状态是三条
+    #   互不相通的线**，利冲放行只改利冲自己的状态。
+    #   人得再去案件概览手动点两次（草稿→利冲审查中→待立案）。
+    #
+    #   **做完了事却要去别处再点一遍确认，人一定会漏** ——
+    #   然后案件卡在草稿，待办、看板、时限全都不把它当在办案件。
+    #
+    # ★ 只推到「待立案」为止，**不自动推到「办理中」** ——
+    #   立没立案是法院说了算的事实，不是系统能替律师断的。
+    if status == "waived" or check.status == "cleared":
+        _advance_case_after_pass(session, check.case_id, decided_by)
+
     session.flush()
     # EVENT: conflict.decided
     return check
+
+
+def _advance_case_after_pass(session: Session, case_id: int,
+                             actor_id: Optional[int]) -> None:
+    """利冲过了 → 把案件推到「待立案」。
+
+    ★ 推不动就**只记日志不报错**：案件可能已经在更后面的状态了
+      （比如重跑了一次利冲），那不是错误。
+      让利冲处置因为案件状态而失败，是本末倒置。
+    """
+    case_api = registry.api("case")
+    try:
+        case = case_api.get_case(session, case_id)
+    except Exception as exc:                             # noqa: BLE001
+        logger.warning("利冲放行后取案件失败 case=%s: %s", case_id, exc)
+        return
+
+    # 草稿 → 利冲审查中 → 待立案，一步步走完（状态机不允许跳）
+    for target in ("conflict_check", "pending"):
+        if case.status == target:
+            continue
+        try:
+            case_api.transition(session, case_id, target, actor_id=actor_id,
+                                note="利冲已放行，自动推进")
+        except Exception as exc:                         # noqa: BLE001
+            logger.info("利冲放行后推进到 %s 未成功（多半是已经过了这一步）："
+                        "case=%s %s", target, case_id, exc)
+            break
 
 
 def resolve_hit(session: Session, hit_id: int, resolution: str) -> ConflictHit:

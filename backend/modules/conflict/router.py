@@ -126,12 +126,21 @@ def decide(
     check_id: int,
     payload: DecideIn,
     request: Request,
-    principal: Principal = Depends(require_perm("conflict.decide")),
+    # ★ 门槛只到 review —— 具体要 review 还是 decide，
+    #   由 service.assert_can_decide 按**最高命中等级**判。
+    principal: Principal = Depends(require_perm("conflict.review")),
     session: Session = Depends(get_session),
 ) -> CheckDetailOut:
-    """管委会处置。**放行必须写理由**，可顺带设隔离墙。"""
+    """处置利冲。**放行必须写理由**，可顺带设隔离墙。
+
+    ★ 谁能拍板看命中等级：
+        blocked（对方就是我方客户）→ 管委会 conflict.decide
+        review （关联方、旧客户）  → 风控/主任 conflict.review
+    """
     check = service.get_check(session, check_id)
     _assert_case_visible(session, principal, check.case_id)
+    # ★ 真正的分级判断在这里 —— 报错会说清该找谁
+    service.assert_can_decide(session, principal, check_id)
     service.decide(
         session, check_id, payload.status, principal.user_id, payload.note,
         walls=[w.model_dump() for w in payload.walls],
@@ -149,7 +158,7 @@ def decide(
 def resolve_hit(
     hit_id: int,
     payload: ResolveIn,
-    principal: Principal = Depends(require_perm("conflict.decide")),
+    principal: Principal = Depends(require_perm("conflict.review")),
     session: Session = Depends(get_session),
 ) -> HitOut:
     """单条处置。逐条给理由，比整体一句"已确认无冲突"更经得起检查。"""
@@ -176,3 +185,18 @@ def _assert_case_visible(session: Session, principal: Principal, case_id: int) -
 
 
 CheckDetailOut.model_rebuild()
+
+
+@router.get("/checks/{check_id}/who")
+def who_decides(
+    check_id: int,
+    principal: Principal = Depends(require_perm("conflict.view")),
+    session: Session = Depends(get_session),
+) -> dict:
+    """这次检查该谁处置 —— 前端据此显示按钮和提示，不写死。"""
+    need = service.required_perm(session, check_id)
+    return {
+        "required_perm": need,
+        "who": "管委会" if need == "conflict.decide" else "风控或主任",
+        "can_i": principal.can(need) or principal.can("conflict.decide"),
+    }

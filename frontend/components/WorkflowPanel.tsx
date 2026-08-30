@@ -443,6 +443,20 @@ function ElementEditor({ elements, edits, onChange }: {
   onChange: (v: Record<string, string | boolean>) => void;
 }) {
   const val = (k: string) => (k in edits ? edits[k] : elements[k] ?? "");
+
+  /** ★ 布尔要素**不能用 JS 真假值读**。
+   *
+   *  勾掉时写的是字符串 `"否"`，而 `!!"否"` 是 **true** ——
+   *  于是勾上之后再也取消不掉，界面永远显示打勾。
+   *  （后端 `normalize_elements` 认得 "否"，所以存进去的值一直是对的，
+   *   坏的只有这一屏的显示 —— 但律师看到的是"我取消不了"。）
+   *
+   *  后端只把「是 / 有 / true / 1」当真，其余一律 false —— 这里照它来。 */
+  const isOn = (v: unknown) => {
+    if (typeof v === "boolean") return v;
+    const t = String(v ?? "").trim();
+    return t === "是" || t === "有" || t === "true" || t === "1";
+  };
   return (
     <div style={{ marginTop: 10 }}>
       <div className="muted small" style={{ marginBottom: 6 }}>
@@ -454,7 +468,7 @@ function ElementEditor({ elements, edits, onChange }: {
             {f.label}
             {f.bool ? (
               <div>
-                <input type="checkbox" checked={!!val(f.key)} style={{ width: "auto" }}
+                <input type="checkbox" checked={isOn(val(f.key))} style={{ width: "auto" }}
                        onChange={(e) => onChange({ ...edits, [f.key]: e.target.checked ? "是" : "否" })} />
               </div>
             ) : (

@@ -479,3 +479,113 @@ def test_wall_actually_blocks_case_access(session, firm):
     wang_codes = set(session.scalars(case_svc.scoped_cases(session, wang_p).with_only_columns(
         __import__("modules.case.models", fromlist=["Case"]).Case.code)))
     assert "WALL1" in wang_codes
+
+
+# ================================================================ 分级处置
+
+
+def _checked(session, firm, code):
+    """造一个有命中的检查 —— 双方都挂上，跑一次。"""
+    a = party(session, firm, "甲公司" + code)
+    b = party(session, firm, "乙公司" + code)
+    c = make_case(session, firm, code)
+    case_svc.add_party(session, firm["tenant"].id, c.id, a.id, "plaintiff", is_ours=True)
+    case_svc.add_party(session, firm["tenant"].id, c.id, b.id, "defendant")
+    check = conflict.run_check(session, firm["tenant"].id, c.id,
+                               requested_by=firm["wang"].id)
+    return c, check
+
+
+def test_who_decides_depends_on_hit_level(session, firm):
+    """★ **谁能拍板看最高命中等级，不是一刀切给管委会。**
+
+    原来只有一档 `conflict.decide`：所有命中都推给管委会。
+    问题是**管委会在中国律所不是天天在线的审批岗，是开会的机构** ——
+    把"关联方在别的案子里出现过"也推给它，它待办里就堆满本该秒过的东西，
+    然后养成"全点放行"的习惯，**这道闸就废了**。
+    """
+    _c, check = _checked(session, firm, "L001")
+    hits = conflict.hits_of(session, check.id)
+    if not hits:
+        pytest.skip("这组数据没命中，测不到分级")
+
+    for h in hits:
+        h.level = "review"
+    session.flush()
+    assert conflict.required_perm(session, check.id) == "conflict.review"
+
+    hits[0].level = "blocked"
+    session.flush()
+    assert conflict.required_perm(session, check.id) == "conflict.decide"
+
+
+def test_decide_is_a_superset_of_review(session, firm):
+    """★ 有 decide 的人自然也能处理 review —— 权限是包含关系。
+
+    反过来不行：真冲突必须上管委会，这是执业红线。
+    """
+    from modules.identity import access
+
+    _c, check = _checked(session, firm, "L002")
+    hits = conflict.hits_of(session, check.id)
+    if not hits:
+        pytest.skip("这组数据没命中")
+    for h in hits:
+        h.level = "review"
+    session.flush()
+
+    p = access.build_principal(session, firm["wang"].id)
+    object.__setattr__(p, "permissions",
+                       frozenset(set(p.permissions) | {"conflict.decide"}))
+    conflict.assert_can_decide(session, p, check.id)   # 不该抛
+
+
+def test_error_says_who_to_ask(session, firm):
+    """★ 报错要说清**该找谁**，不能只说"你没权限"。"""
+    from modules.identity import access
+
+    _c, check = _checked(session, firm, "L003")
+    hits = conflict.hits_of(session, check.id)
+    if not hits:
+        pytest.skip("这组数据没命中")
+    for h in hits:
+        h.level = "blocked"
+    session.flush()
+
+    p = access.build_principal(session, firm["wang"].id)
+    object.__setattr__(p, "permissions",
+                       frozenset(x for x in p.permissions
+                                 if x != "conflict.decide"))
+    with pytest.raises(DomainError) as e:
+        conflict.assert_can_decide(session, p, check.id)
+    assert e.value.code == "conflict.cannot_decide"
+    assert "管委会" in e.value.message
+
+
+def test_passing_a_check_advances_the_case(session, firm):
+    """★★ **利冲放行之后要把案件往前推。**
+
+    这是踩出来的：用户跑完利冲、点了放行、办案流程也走完了，
+    案件却一直显示「草稿」—— 因为**利冲、流程、案件状态是三条
+    互不相通的线**。人得再去案件概览手动点两次。
+
+    **做完了事却要去别处再点一遍确认，人一定会漏** ——
+    然后案件卡在草稿，待办、看板、时限全都不把它当在办案件。
+
+    ★ 只推到「待立案」，**不自动推到「办理中」** ——
+      立没立案是法院说了算的事实，不是系统能替律师断的。
+    """
+    c, check = _checked(session, firm, "L004")
+
+    # ★ 两条路都要推：无冲突（cleared）直接推，有命中的放行后推。
+    #   `cleared` 那条尤其重要 —— 它连"处置"这个动作都没有
+    #   （decide 会拒"本次检查无冲突，无需处置"），
+    #   **最顺利的那条路反而最容易卡住**。
+    if check.status != "cleared":
+        conflict.decide(session, check.id, "waived", firm["wang"].id, "测试放行")
+    session.flush()
+
+    assert case_svc.get_case(session, c.id).status == "pending"
+
+    logs = case_svc.status_history(session, c.id)
+    assert any("自动推进" in (l.note or "") for l in logs)

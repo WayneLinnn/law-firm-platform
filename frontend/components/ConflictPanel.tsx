@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   runConflictCheck, fetchLatestConflict, fetchConflictChecks,
-  decideConflict, resolveHit, fetchWalls, removeWall,
+  decideConflict, resolveHit, fetchWalls, removeWall, fetchConflictWho,
   CONFLICT_PASSING, CONFLICT_STATUS_LABEL, HIT_LEVEL_LABEL, HIT_KIND_LABEL,
   type ConflictCheckDetail, type ConflictCheck, type ConflictHit,
   type Party, type User, type Wall,
@@ -50,12 +50,25 @@ export function ConflictPanel({
   const inFlight = useRef(false);
 
   const canRun = can("conflict.run");
-  const canDecide = can("conflict.decide");
+  /* ★ 谁能拍板**由后端按命中等级判**，不在前端写死：
+   *
+   *     blocked（对方就是我方客户）→ 管委会 conflict.decide
+   *     review （关联方、旧客户）  → 风控/主任 conflict.review
+   *
+   *   前端写死等于把业务规则抄两份，改一处就会漂。 */
+  const [who, setWho] = useState<{ who: string; can_i: boolean;
+                                  required_perm: string } | null>(null);
+  const canDecide = who ? who.can_i
+                        : (can("conflict.decide") || can("conflict.review"));
   const canManageWall = can("identity.manage_wall");
   const myId = me?.user.id ?? 0;
 
   function reload() {
-    fetchLatestConflict(caseId).then(setLatest).catch(() => setLatest(null));
+    fetchLatestConflict(caseId).then((d) => {
+      setLatest(d);
+      if (d) fetchConflictWho(d.id).then(setWho).catch(() => {});
+      if (d) fetchConflictWho(d.id).then(setWho).catch(() => setWho(null));
+    }).catch(() => { setLatest(null); setWho(null); });
     fetchConflictChecks(caseId).then(setHistory).catch(() => {});
     // 墙要看得见 —— 看不见的墙没法排查也没法撤
     if (canManageWall) fetchWalls("case", caseId).then(setWalls).catch(() => setWalls([]));
@@ -270,8 +283,12 @@ export function ConflictPanel({
             </div>
           )
         ) : (
-          <p className="muted small" style={{ marginTop: 12 }}>
-            等待管委会决定。放行/阻断需要 <code>conflict.decide</code> 权限。
+          <p className="field-hint" style={{ marginTop: 12 }}>
+            {/* ★ 说清**该找谁** —— 只说"你没权限"，人不知道下一步做什么 */}
+            这次要<b>{who?.who ?? "管委会"}</b>处置。
+            {who?.required_perm === "conflict.review"
+              ? "　命中的是关联方/旧关系，风控或主任看一眼就能定。"
+              : "　命中了「对方是我方客户」这类硬冲突 —— 必须上管委会。"}
           </p>
         )
       )}

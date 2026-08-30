@@ -557,6 +557,24 @@ function SectionCard({ s, readonly, busy, editing, buffer, canCreate,
           ) : (
             <p className="muted small" style={{ margin: "6px 0 0" }}>（还是空的）</p>
           )}
+
+          {/* ★ **生成要十几秒，这期间必须有动静。**
+              原来只把按钮文字改成"生成中…" —— 用户的视线在正文区，
+              根本注意不到那个小按钮，于是"点了半天没反应，不知道有没有在跑"。
+              进度条放在**正文的位置**，并说清在等什么、大概多久。 */}
+          {busy && (
+            <div className="genbar">
+              <div className="genbar-track"><span /></div>
+              <div className="small">
+                正在起草「{s.title}」…
+                <span className="muted">　通常 10–30 秒，长的一节会久一点</span>
+              </div>
+              <div className="field-hint">
+                模型只能用已检索到的依据写，写不出来会明说「依据不足」——
+                <b>不会编法条</b>。
+              </div>
+            </div>
+          )}
           {s.warnings.length > 0 && (
             <div className="small" style={{ marginTop: 5, color: bad ? "var(--err)" : "var(--warn)" }}>
               {s.warnings.map((w, i) => <div key={i}>⚠ {w}</div>)}

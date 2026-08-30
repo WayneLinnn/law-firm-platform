@@ -44,7 +44,7 @@ DEFAULT_ROLES = (
       "audit.view",
       "crm.view", "crm.manage", "crm.manage_party", "crm.transfer",
       "case.view", "case.manage", "case.close", "case.manage_cause",
-      "conflict.run", "conflict.view", "conflict.decide",
+      "conflict.run", "conflict.view", "conflict.review", "conflict.decide",
       "retrieval.search", "retrieval.ask", "retrieval.view", "retrieval.cost",
       "workflow.start", "workflow.view", "workflow.resume", "workflow.cancel",
       "doc.view", "doc.upload", "doc.manage", "doc.delete",
@@ -61,7 +61,10 @@ DEFAULT_ROLES = (
      "可查本团队及其下级的数据",
      ("identity.view", "crm.view", "crm.manage", "crm.manage_party", "crm.transfer",
       "case.view", "case.manage", "case.close",
-      "conflict.run", "conflict.view",
+      # ★ 团队负责人处置 **review 级**命中（关联方、旧客户）——
+      #   这一档占绝大多数，推给管委会只会把那道闸点废。
+      #   真冲突（blocked）仍然只有管委会能拍板。
+      "conflict.run", "conflict.view", "conflict.review",
       "retrieval.search", "retrieval.ask", "retrieval.view",
       "workflow.start", "workflow.view", "workflow.resume", "workflow.cancel",
       "doc.view", "doc.upload", "doc.manage", "doc.delete",
