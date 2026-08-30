@@ -580,14 +580,31 @@ function SectionCard({ s, readonly, busy, editing, buffer, canCreate,
               {s.warnings.map((w, i) => <div key={i}>⚠ {w}</div>)}
             </div>
           )}
+          {/* ★ **三种节的按钮完全不一样，不能都叫"生成"。**
+              原来的条件是 `kind !== "manual"` —— 于是 `fill` 类型
+              （原告、被告、法院，从案件字段直接填的）也显示"生成"。
+              点它不调模型、几毫秒就回来，界面**看着就像没反应**。
+              而律师会以为是坏了，反复点那个按钮。 */}
           {!readonly && canCreate && (
-            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-              {s.kind !== "manual" && (
+            <div className="row tight" style={{ marginTop: 8 }}>
+              {s.kind === "generate" && (
                 <button className="btn ghost sm" onClick={onGen} disabled={busy}>
-                  {busy ? "生成中…" : s.content ? "重新生成" : "生成"}
+                  {busy ? "生成中…" : s.content ? "重新生成" : "AI 起草这一节"}
+                </button>
+              )}
+              {s.kind === "fill" && (
+                <button className="btn ghost sm" onClick={onGen} disabled={busy}>
+                  从案件重新取
                 </button>
               )}
               <button className="btn ghost sm" onClick={onEdit}>自己改</button>
+
+              {/* 说清这一节是谁写的 —— 三种来源的可信度完全不同 */}
+              <span className="muted small">
+                {s.kind === "generate" ? "这一节由 AI 起草，写完要逐句核对"
+                 : s.kind === "fill" ? "从案件字段直接填，不经过 AI"
+                 : "这一节平台不代写"}
+              </span>
             </div>
           )}
         </>

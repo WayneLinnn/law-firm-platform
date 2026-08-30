@@ -837,3 +837,36 @@ hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
 @media (prefers-reduced-motion: reduce) {
   .genbar-track > span { animation: none; width: 100%; opacity: .5; }
 }
+
+/* ---------------------------------------------------------------- 确认弹窗 */
+
+/* ★ 替掉 window.confirm —— 那个贴在**屏幕最顶上**，
+     而用户的手和视线在页面中间的按钮上，很容易没看清就点了确定。
+     不可逆动作（结案、归档、终止）这么处理是不行的。 */
+.modal-back {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0, 0, 0, .45);
+  display: grid; place-items: center;
+  padding: 20px;
+}
+.modal {
+  width: 100%; max-width: 460px;
+  background: var(--popover); color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 22px 24px 18px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, .3);
+}
+.modal h3 { font-size: 16px; margin-bottom: 10px; }
+.modal-body { font-size: 13.5px; line-height: 1.7; white-space: pre-wrap; }
+.modal-body b { color: var(--foreground); }
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .modal { animation: modalin .12s ease-out; }
+  @keyframes modalin {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: none; }
+  }
+}

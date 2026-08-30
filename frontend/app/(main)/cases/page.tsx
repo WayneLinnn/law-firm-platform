@@ -24,11 +24,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   fetchCases, fetchCaseDetail, fetchCauses, fetchParties, fetchUsers,
-  fetchTabCounts,
+  fetchTabCounts, fetchDeadlines,
   transitionCase, ApiError,
   CASE_STATUS_LABEL, PARTY_ROLE_LABEL, MATTER_KIND_LABEL, MEMBER_ROLE_LABEL,
   IRREVERSIBLE_STATUSES,
   type CaseRow, type CaseDetail, type Cause, type Party, type User,
+  type DeadlineItem,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
@@ -36,6 +37,7 @@ import {
   Tabs, useNotice, useTabs, type Column, type TabDef,
 } from "@/components/ui";
 import { DrillBanner, useDrill } from "@/components/Drill";
+import { useConfirm } from "@/components/Confirm";
 import { SearchPanel } from "@/components/SearchPanel";
 import { ConflictPanel } from "@/components/ConflictPanel";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
@@ -313,7 +315,8 @@ function CaseDetailView({ detail, causeById, partyById, userById,
         {tab === "overview" && (
           <Overview detail={detail} causeById={causeById} partyById={partyById}
                     userById={userById} canManage={canManage} canClose={canClose}
-                    onRefresh={onRefresh} onNotice={onNotice} />
+                    onRefresh={onRefresh} onNotice={onNotice}
+                    onGoTab={setTab} />
         )}
 
         {tab === "work" && (
@@ -360,7 +363,7 @@ function CaseDetailView({ detail, causeById, partyById, userById,
  *   对手是谁、下一步能往哪走。
  */
 function Overview({ detail, causeById, partyById, userById,
-                    canManage, canClose, onRefresh, onNotice }: {
+                    canManage, canClose, onRefresh, onNotice, onGoTab }: {
   detail: CaseDetail;
   causeById: Record<number, Cause>;
   partyById: Record<number, Party>;
@@ -369,21 +372,31 @@ function Overview({ detail, causeById, partyById, userById,
   canClose: boolean;
   onRefresh: (id: number) => void;
   onNotice: (k: "ok" | "error", t: string) => void;
+  onGoTab: (k: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [confirmUI, confirm] = useConfirm();
 
-  async function go(to: string) {
+  /* ★ **概览要显示会出事的时限。**
+   *
+   *   原来概览完全没有时限 —— 你在「时限明细」看到有过期的，点进案子
+   *   却什么也看不到，得再去点第 4 个页签。
+   *   **过期的期限是全案最贵的东西，不该藏在页签里。**
+   *
+   *   这里只列会出事的三档（过期/算不出/临近），正常的不占地方 ——
+   *   要看全部去「时限」页签。 */
+  const [dls, setDls] = useState<DeadlineItem[]>([]);
+  useEffect(() => {
+    fetchDeadlines(detail.id).then(setDls).catch(() => {});
+  }, [detail.id]);
+
+  const ORDER: Record<string, number> = { expired: 0, unknown: 1, urgent: 2 };
+  const risky = dls
+    .filter((d) => d.status in ORDER)
+    .sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9));
+
+  async function doGo(to: string) {
     const label = CASE_STATUS_LABEL[to] ?? to;
-    // ★ 不可逆的状态没有回头路 —— 点错一次就完了，必须先问一句
-    if (IRREVERSIBLE_STATUSES.includes(to)) {
-      const yes = window.confirm(
-        `确定把「${detail.code} ${detail.title}」推进到「${label}」吗？\n\n` +
-        `⚠ 这是不可逆动作 —— 「${label}」是终态，之后不能再退回` +
-        `「${CASE_STATUS_LABEL[detail.status] ?? detail.status}」。\n` +
-        `如果只是想暂停，请不要用这个。`
-      );
-      if (!yes) return;
-    }
     setBusy(true);
     try {
       await transitionCase(detail.id, to);
@@ -394,10 +407,46 @@ function Overview({ detail, causeById, partyById, userById,
     } finally { setBusy(false); }
   }
 
+  /** ★ **每一次状态改变都问一句**，不只是不可逆的那几个。
+   *
+   *  案件状态决定它进不进待办、算不算在办、能不能开票 ——
+   *  点错一次影响的不只是这一屏。
+   *
+   *  弹窗**居中**，不用 `window.confirm`（那个贴在屏幕最顶上，
+   *  而手和视线都在页面中间的按钮上，很容易没看清就点了确定）。 */
+  function go(to: string) {
+    const label = CASE_STATUS_LABEL[to] ?? to;
+    const from = CASE_STATUS_LABEL[detail.status] ?? detail.status;
+    const irreversible = IRREVERSIBLE_STATUSES.includes(to);
+    confirm({
+      title: `把案件推进到「${label}」？`,
+      danger: irreversible,
+      okText: irreversible ? `确认${label}` : "推进",
+      // ★ 终止是真的没有回头路 —— 要求打一遍字，光点一下太便宜了
+      typeToConfirm: to === "terminated" ? "终止" : undefined,
+      body: (
+        <>
+          <b>{detail.code}　{detail.title}</b>
+          <div style={{ marginTop: 6 }}>{from} → <b>{label}</b></div>
+          {irreversible && (
+            <div style={{ marginTop: 10 }}>
+              ⚠ <b>这是不可逆动作</b> —— 「{label}」是终态，
+              之后不能再退回「{from}」。
+              <div>如果只是想暂停，请不要用这个。</div>
+            </div>
+          )}
+        </>
+      ),
+      onOk: () => { void doGo(to); },
+    });
+  }
+
   const canGo = detail.next_statuses.length > 0;
 
   return (
     <>
+      {confirmUI}
+
       {/* ★ 推进按钮提到最上面做成一条**动作条**。
           原来它在右栏 —— 窄屏塌成一列时排到第 4 位，
           而这是这一屏**唯一的动作**，不该埋在三张表下面。 */}
@@ -428,6 +477,51 @@ function Overview({ detail, causeById, partyById, userById,
           </span>
         )}
       </div>
+
+    {/* ★ 会出事的时限顶在最前面 —— 比案件信息还靠前。
+        一份看着干净的概览如果藏着一条过期的除斥期间，它就是在骗人。 */}
+    {risky.length > 0 && (
+      <div className="alert bad" style={{ marginBottom: 14 }}>
+        <div className="alert-head">
+          <b>这个案子有 {risky.length} 条时限要处理</b>
+          <Button size="sm" onClick={() => onGoTab("deadline")}>
+            去时限页签 →
+          </Button>
+        </div>
+        <table style={{ marginTop: 6 }}>
+          <tbody>
+            {risky.slice(0, 5).map((d) => (
+              <tr key={d.id}>
+                <td>
+                  {d.fatal && <Badge tone="bad" title="除斥期间：过期即失权">不可中断</Badge>}
+                  {" "}{d.name}
+                  <div className="muted small">{d.basis}</div>
+                </td>
+                <td style={{ width: 128 }}>
+                  {/* ★ 算不出的时候不能空着 —— 空白会被读成「没事」 */}
+                  {d.due_on
+                    ? <span className={d.status === "expired" ? "bad" : "warn"}>
+                        {d.due_on}
+                        {d.days_left !== null && (
+                          <div className="small">
+                            {d.days_left < 0 ? `已过 ${-d.days_left} 天`
+                                             : `还剩 ${d.days_left} 天`}
+                          </div>
+                        )}
+                      </span>
+                    : <span className="bad small">
+                        缺「{d.anchor_label || "起算日"}」
+                      </span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {risky.length > 5 && (
+          <p className="field-hint">还有 {risky.length - 5} 条，见「时限」页签。</p>
+        )}
+      </div>
+    )}
 
     <div className="grid aside">
       <div className="stack">
