@@ -128,6 +128,17 @@ export function ConflictPanel({
   const passing = latest ? CONFLICT_PASSING.includes(latest.status) : false;
   const needsDecision = latest?.status === "pending";
 
+  /* ★ **已阻断的案子也要能重新处置。**
+   *
+   *   原来处置区只在 `pending` 时渲染 —— 一旦阻断，界面上**没有任何出口**：
+   *   按钮全没了，只剩一条"已阻断"。而实际业务里改主意很常见：
+   *   对方撤了、征得双方书面同意了、发现是同名不同人。
+   *
+   *   **一个做完就没法回头的决定，人就不敢做** —— 然后利冲这道闸
+   *   要么没人点，要么全点"放行"。 */
+  const canRedecide = latest?.status === "blocked";
+  const showDecideBox = needsDecision || canRedecide;
+
   // ★ **没通过、或者还等着处置的，必须默认展开。**
   //   那是"不能往下走"的信号 —— 收起来就等于没查。
   //   已经放行的可以收起来，它只是个历史记录了。
@@ -195,8 +206,8 @@ export function ConflictPanel({
         </div>
       )}
 
-      {/* 管委会处置 */}
-      {needsDecision && (
+      {/* 管委会处置 —— pending 要处置，blocked 可以改主意 */}
+      {showDecideBox && (
         canDecide ? (
           showDecide ? (
             <div className="decide-box">
@@ -240,15 +251,23 @@ export function ConflictPanel({
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                 <button className="btn" onClick={() => decide("waived")} disabled={busy}>放行</button>
                 <button className="btn secondary" onClick={() => decide("blocked")} disabled={busy}>
-                  阻断，不接这个案子
+                  {canRedecide ? "维持阻断" : "阻断，不接这个案子"}
                 </button>
                 <button className="btn secondary" onClick={() => setShowDecide(false)}>取消</button>
               </div>
             </div>
           ) : (
-            <button className="btn" style={{ marginTop: 12 }} onClick={() => setShowDecide(true)}>
-              管委会处置
-            </button>
+            <div style={{ marginTop: 12 }}>
+              <button className="btn" onClick={() => setShowDecide(true)}>
+                {canRedecide ? "重新处置" : "管委会处置"}
+              </button>
+              {canRedecide && (
+                <p className="field-hint" style={{ marginTop: 6 }}>
+                  本案已阻断。★ 情况变了可以改 —— 对方撤了、征得双方书面同意、
+                  查实是同名不同人。<b>改判同样要写理由，同样留痕。</b>
+                </p>
+              )}
+            </div>
           )
         ) : (
           <p className="muted small" style={{ marginTop: 12 }}>

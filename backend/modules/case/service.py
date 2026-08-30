@@ -15,7 +15,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
-from sqlalchemy import String, cast, or_, select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from kernel.container import container
@@ -272,6 +272,34 @@ def _require_can_handle(session: Session, user_id: int) -> None:
                 lic.get("full_name") or "该律师", lic["status_label"]),
             code="case.license_invalid",
         )
+
+
+def next_case_code(session: Session, tenant_id: int,
+                   today: Optional[date] = None) -> str:
+    """自动生成案件编号：AJ2026-0007。
+
+    ★ **能自动生成的东西不要问人。** 客户编号那次已经验证过：
+      逼用户想一个，填出来的就是「1」「aaa」「测试」，这一列随即报废。
+
+    ★ 按**年**分段，不跨年连号 —— 律所的卷宗是按年归档的，
+      编号跨年连着走，翻卷时对不上年份。
+
+    ★ 律所想用自己的编号规则，**照样能手工填** —— 这只是留空时的默认值。
+      很多所有自己的规则（部门代号＋序号），不能把人锁死。
+    """
+    today = today or date.today()
+    prefix = "AJ{0}-".format(today.year)
+    n = session.scalar(
+        select(func.count()).select_from(Case)
+        .where(Case.tenant_id == tenant_id, Case.code.like(prefix + "%"))
+    ) or 0
+    while True:
+        n += 1
+        code = "{0}{1:04d}".format(prefix, n)
+        hit = session.scalar(select(Case).where(
+            Case.tenant_id == tenant_id, Case.code == code))
+        if hit is None:
+            return code
 
 
 def create_case(

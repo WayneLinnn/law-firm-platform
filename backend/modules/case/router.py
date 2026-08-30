@@ -122,7 +122,8 @@ class CaseDetailOut(CaseOut):
 
 
 class CaseIn(BaseModel):
-    code: str
+    #: ★ 留空自动生成 AJ2026-0001。律所有自己的编号规则就手工填。
+    code: str = ""
     title: str
     lead_id: Optional[int] = Field(default=None, description="留空则记在自己名下")
     cause_id: Optional[int] = None
@@ -279,8 +280,11 @@ def create_case(
     principal: Principal = Depends(require_perm("case.manage")),
     session: Session = Depends(get_session),
 ) -> CaseOut:
+    # ★ 留空自动生成 —— 逼用户想编号，填出来的就是「1」「测试」
+    code = payload.code.strip() or service.next_case_code(
+        session, principal.tenant_id)
     case = service.create_case(
-        session, principal.tenant_id, payload.code, payload.title,
+        session, principal.tenant_id, code, payload.title,
         lead_id=payload.lead_id or principal.user_id,
         cause_id=payload.cause_id, client_id=payload.client_id,
         org_unit_id=payload.org_unit_id, court=payload.court,

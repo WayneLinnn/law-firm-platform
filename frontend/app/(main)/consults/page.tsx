@@ -18,13 +18,15 @@ import {
   type Consult, type Client, type User, type Party,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Badge, Metric, Notice, Section, useNotice } from "@/components/ui";
+import { Badge, Button, Metric, Notice, Section, useNotice } from "@/components/ui";
 import { DrillBanner, useDrill } from "@/components/Drill";
+import { NewConsult } from "@/components/NewConsult";
 
 export default function ConsultsPage() {
   const { can } = useAuth();
-  const { notice, clear, fail } = useNotice();
+  const { notice, clear, ok, fail } = useNotice();
   const drill = useDrill();
+  const [creating, setCreating] = useState(false);
 
   const [rows, setRows] = useState<Consult[]>([]);
   const [clients, setClients] = useState<Record<number, Client>>({});
@@ -72,7 +74,22 @@ export default function ConsultsPage() {
       <Notice {...notice} onClose={clear} />
       <DrillBanner drill={drill} label="本期咨询费" n={live.length} />
 
-      <Section title="咨询记录" desc="包括没立案的 —— 那才是多数">
+      {/* ★ 独立的新建入口。原来 ConsultPanel 只挂在案件页、还要案件挂了客户
+          才显示 —— 于是**没接案的咨询根本记不了**，而那才是多数。 */}
+      {creating && (
+        <NewConsult
+          onCancel={() => setCreating(false)}
+          onDone={() => { setCreating(false); void load(); }}
+          onNotice={(k, t) => (k === "ok" ? ok(t) : fail(new Error(t)))}
+        />
+      )}
+
+      <Section title="咨询记录" desc="包括没立案的 —— 那才是多数"
+               extra={can("consult.log") && !creating && (
+                 <Button variant="primary" onClick={() => setCreating(true)}>
+                   + 记一次咨询
+                 </Button>
+               )}>
         <div className="metrics">
           <Metric n={`¥${total.toFixed(2)}`} label="收费合计" tone="ok" />
           <Metric n={live.length} label="次咨询" />

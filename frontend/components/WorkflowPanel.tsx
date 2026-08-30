@@ -75,12 +75,29 @@ export function WorkflowPanel({ caseId, caseSummary }: {
       const d = await fetchRun(runId);
       if (misses.current > 0) { misses.current = 0; clear(); }
       setDetail(d);
-      if (d.status !== "running") {
+
+      /* ★ **只有真正结束了才停轮询。**
+       *
+       *   原来的判断是 `d.status !== "running"` 就停 —— 而
+       *   `waiting_human` 也不等于 "running"，于是**一到人工确认点
+       *   轮询就停了**。你点「确认并继续」，后端异步把状态推成 running、
+       *   跑完变 done，可界面这边早就不看了 ——
+       *   屏幕上永远停在「等你确认」。
+       *
+       *   这就是"确认完了记录还显示等你确认"的原因：不是没保存，
+       *   是界面不再刷新。 */
+      const finished = ["done", "failed", "cancelled"].includes(d.status);
+      if (finished) {
         stopPolling();
-        setBusy(false);
+      }
+      if (d.status !== "waiting_human") {
+        // 离开确认点就把输入清掉 —— 否则下一个确认点会带着上一次的字
         setAnswer("");
         setEdits({});
         setDropped([]);
+      }
+      if (finished || d.status === "waiting_human") {
+        setBusy(false);
         fetchCaseRuns(caseId).then(setRuns).catch(() => {});
       }
     } catch (e) {
@@ -290,11 +307,26 @@ export function WorkflowPanel({ caseId, caseSummary }: {
               </label>
               <textarea rows={2} value={answer} onChange={(e) => setAnswer(e.target.value)}
                         placeholder="例：要素无误，应付款日期以结算确认单为准" />
-              <div style={{ marginTop: 10 }}>
-                <button className="btn" onClick={submit} disabled={busy || !canResume}
-                        title={canResume ? undefined : "需要 workflow.resume 权限"}>
+              {/* ★ **改到一半要能撤。**
+                  原来这里只有「确认并继续」一个按钮 —— 要素改错了、
+                  焦点点错了，唯一的出路是「中止流程」，而中止之后
+                  前面跑的全白做。**一个只能往前不能后退的表单，
+                  人就不敢在上面改东西。** */}
+              <div className="row tight" style={{ marginTop: 10 }}>
+                <button className="btn" onClick={submit}
+                        disabled={busy || !canResume || !answer.trim()}
+                        title={!canResume ? "需要 workflow.resume 权限"
+                               : !answer.trim() ? "确认内容不能为空 —— 这句话会留痕"
+                               : undefined}>
                   确认并继续
                 </button>
+                <button className="btn secondary" disabled={busy}
+                        onClick={() => { setAnswer(""); setEdits({}); setDropped([]); }}>
+                  撤销我的修改
+                </button>
+                <span className="muted small">
+                  撤销只清掉这一屏改的东西，<b>流程不会中止</b>
+                </span>
               </div>
             </div>
           )}

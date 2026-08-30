@@ -80,11 +80,12 @@ export function NewCase({ onCreated, onCancel }: {
   }
 
   async function submit() {
-    if (!code.trim() || !title.trim()) { fail(new Error("编号和名称必填")); return; }
+    // ★ 编号留空由后端自动生成 AJ2026-0001 —— 只有名称是必填的
+    if (!title.trim()) { fail(new Error("案件名称必填")); return; }
     setBusy(true);
     try {
       const c = await createCase({
-        code: code.trim(), title: title.trim(),
+        code: code.trim(), title: title.trim(),   // code 空串 = 让后端生成
         cause_id: causeId === "" ? null : Number(causeId),
         lead_id: leadId === "" ? null : Number(leadId),
         org_unit_id: orgId === "" ? null : Number(orgId),
@@ -110,8 +111,9 @@ export function NewCase({ onCreated, onCancel }: {
       <Notice text={notice.text} kind={notice.kind} onClose={clear} />
 
       <div className="newcase-grid">
-        <label className="small">案件编号 *
-          <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="AJ2026004" />
+        <label className="small">案件编号
+          <input value={code} onChange={(e) => setCode(e.target.value)}
+                 placeholder="留空自动生成 AJ2026-0001" />
         </label>
         <label className="small">案件名称 *
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="甲诉乙建设工程施工合同纠纷" />
@@ -173,8 +175,8 @@ export function NewCase({ onCreated, onCancel }: {
           </div>
         ))}
 
-        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-          <select style={{ width: 220 }} value=""
+        <div className="addparty">
+          <select value=""
                   onChange={(e) => {
                     const id = Number(e.target.value);
                     if (id) setRows((r) => [...r, { party_id: id, role: "defendant", is_ours: false }]);
@@ -184,14 +186,28 @@ export function NewCase({ onCreated, onCancel }: {
                     .map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <input value={newName} onChange={(e) => setNewName(e.target.value)}
-                 placeholder="或新建主体，输入名称" style={{ width: 220 }} />
-          {newName.trim().length >= 2 && (
-            <>
-              <button className="btn ghost sm" onClick={() => addNewParty(true)}>加为我方</button>
-              <button className="btn ghost sm" onClick={() => addNewParty(false)}>加为对方</button>
-            </>
-          )}
+                 placeholder="或新建主体，输入名称" />
         </div>
+
+        {/* ★ 「加为我方 / 加为对方」原来只隔 8px，紧挨着 ——
+            而这两个**点错的后果完全相反**：我方错成对方，利冲就反了，
+            系统会拿自己人去跟自己人查冲突。
+            所以：拉开距离、加图标、我方用主色对方用描边，
+            并且把名字重复一遍（"把「张三」加为…"）。 */}
+        {newName.trim().length >= 2 && (
+          <div className="sidepick">
+            <span className="muted small">
+              把「<b>{newName.trim()}</b>」加为：
+            </span>
+            <button className="btn" onClick={() => addNewParty(true)}>
+              ◤ 我方
+            </button>
+            <span className="sidepick-gap" />
+            <button className="btn secondary" onClick={() => addNewParty(false)}>
+              ◥ 对方
+            </button>
+          </div>
+        )}
 
         {similar.length > 0 && (
           <div className="alert" style={{ marginTop: 8 }}>

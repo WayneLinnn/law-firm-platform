@@ -793,3 +793,22 @@ hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
 .causepick-item:last-child { border-bottom: none; }
 .causepick-item:hover { background: var(--accent); }
 .causepick-more { padding: 8px 11px; border-top: 1px solid var(--border); }
+
+/* 新建案件里的当事人区 */
+.addparty {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px; margin-top: 8px;
+}
+@media (max-width: 720px) { .addparty { grid-template-columns: 1fr; } }
+
+/* ★ 我方 / 对方 —— **点错的后果完全相反**（利冲会反着查），
+     所以要拉开距离，不能像普通的一对按钮那样紧挨着。 */
+.sidepick {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 10px; padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--muted);
+}
+.sidepick-gap { width: 20px; flex: 0 0 auto; }
