@@ -1,0 +1,1562 @@
+<title>康桥平台验收清单</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap">
+
+<style>
+:root {
+  --ground:#f1f4f7; --surface:#fff; --sunk:#e7ecf1;
+  --ink:#1b2027; --muted:#616e7c; --line:#d7dee6;
+  --accent:#1f5c8b; --accent-soft:#1f5c8b12;
+  --pass:#2c6e49; --warn:#96601a; --fail:#a5393a;
+  --shadow:0 1px 2px #1b202710, 0 6px 18px #1b20270a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:#11151a; --surface:#191e25; --sunk:#212935;
+    --ink:#e5eaf1; --muted:#8f9dac; --line:#2a323d;
+    --accent:#6ea9d8; --accent-soft:#6ea9d81c;
+    --pass:#56b381; --warn:#d09a4d; --fail:#d97673;
+    --shadow:0 1px 2px #0006, 0 6px 18px #0004;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:#11151a; --surface:#191e25; --sunk:#212935;
+  --ink:#e5eaf1; --muted:#8f9dac; --line:#2a323d;
+  --accent:#6ea9d8; --accent-soft:#6ea9d81c;
+  --pass:#56b381; --warn:#d09a4d; --fail:#d97673;
+  --shadow:0 1px 2px #0006, 0 6px 18px #0004;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font-family:"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;
+}
+code,.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+code{background:var(--sunk);padding:1px 5px;border-radius:4px;font-size:.86em}
+
+/* 顶栏 */
+.bar{position:sticky;top:0;z-index:20;background:var(--surface);
+  border-bottom:1px solid var(--line)}
+.bar-in{max-width:1020px;margin:0 auto;padding:13px 22px;
+  display:flex;flex-direction:column;gap:11px}
+.bar-top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font-size:18px;font-weight:700;margin:0;letter-spacing:.02em}
+.sub{color:var(--muted);font-size:12.5px}
+.meter{flex:1;min-width:150px;height:6px;border-radius:3px;
+  background:var(--sunk);overflow:hidden;align-self:center}
+.meter i{display:block;height:100%;background:var(--pass);width:0;
+  transition:width .25s}
+.count{font-family:"JetBrains Mono",monospace;font-size:12.5px;
+  font-variant-numeric:tabular-nums;color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:inherit;font-size:12.5px;background:transparent;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;padding:3px 12px;cursor:pointer}
+.chip:hover{color:var(--ink);border-color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+main{max-width:1020px;margin:0 auto;padding:20px 22px 70px}
+
+/* 卡片 */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:9px;
+  padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card h2{font-size:15px;margin:0 0 10px}
+.card p{margin:0 0 8px}
+.card p:last-child{margin-bottom:0}
+
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:5px 9px;border-bottom:1px solid var(--line);
+  vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:11.5px;
+  letter-spacing:.06em;text-transform:uppercase}
+tbody tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+
+/* 模块 */
+.mod{margin:26px 0 12px;display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+.mod .idx{font-family:"JetBrains Mono",monospace;font-size:12px;
+  color:#fff;background:var(--accent);border-radius:5px;padding:2px 8px;
+  font-variant-numeric:tabular-nums}
+.mod h2{font-size:17px;margin:0}
+.mod .why{color:var(--muted);font-size:13px;flex-basis:100%;margin:0}
+
+/* 条目 */
+.item{background:var(--surface);border:1px solid var(--line);
+  border-left:3px solid var(--line);border-radius:8px;
+  padding:13px 16px;margin-bottom:9px;box-shadow:var(--shadow)}
+.item.s-pass{border-left-color:var(--pass)}
+.item.s-fail{border-left-color:var(--fail)}
+.item-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.item-head h3{font-size:14.5px;margin:0;flex:1;min-width:190px}
+.perm{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.star{color:var(--accent);font-weight:700}
+
+ol.steps{margin:9px 0 0;padding-left:20px}
+ol.steps li{margin-bottom:3px;font-size:13.5px}
+.expect{margin-top:9px;background:var(--sunk);border-radius:6px;
+  padding:8px 11px;font-size:13px}
+.expect b{color:var(--accent)}
+
+.acts{display:flex;gap:6px;margin-top:11px;align-items:center;flex-wrap:wrap}
+.act{font:inherit;font-size:12.5px;background:transparent;color:var(--muted);
+  border:1px solid var(--line);border-radius:6px;padding:3px 12px;cursor:pointer}
+.act:hover{color:var(--ink);border-color:var(--muted)}
+.act.on-pass{background:var(--pass);border-color:var(--pass);color:#fff}
+.act.on-fail{background:var(--fail);border-color:var(--fail);color:#fff}
+.act.on-skip{background:var(--sunk);border-color:var(--muted);color:var(--ink)}
+.note{flex:1;min-width:180px;font:inherit;font-size:12.5px;
+  background:var(--ground);color:var(--ink);
+  border:1px solid var(--line);border-radius:6px;padding:4px 9px}
+
+.warnbox{border-left:3px solid var(--warn);background:var(--surface);
+  border:1px solid var(--line);border-left-width:3px;border-radius:8px;
+  padding:13px 16px;margin-bottom:10px}
+.warnbox h3{margin:0 0 5px;font-size:14px}
+
+pre{background:var(--sunk);border-radius:7px;padding:11px 13px;overflow-x:auto;
+  font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.65;margin:8px 0}
+
+.empty{color:var(--muted);font-size:13.5px;padding:20px 0;text-align:center}
+
+@media (max-width:600px){
+  .bar-in,main{padding-left:13px;padding-right:13px}
+  .acts .note{min-width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="bar">
+  <div class="bar-in">
+    <div class="bar-top">
+      <h1>康桥平台验收清单</h1>
+      <span class="sub">Step 1–10 · 7 个模块</span>
+      <span class="meter"><i id="bar"></i></span>
+      <span class="count" id="count">0 / 0</span>
+    </div>
+    <div class="chips">
+      <button class="chip" data-f="all" aria-pressed="true">全部</button>
+      <button class="chip" data-f="todo" aria-pressed="false">还没测</button>
+      <button class="chip" data-f="pass" aria-pressed="false">通过</button>
+      <button class="chip" data-f="fail" aria-pressed="false">有问题</button>
+      <button class="chip" id="reset" style="margin-left:auto">清空</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div class="card">
+    <h2>开始之前</h2>
+    <p>三个进程都要起着。少一个，对应的功能就会报「连不上后端」。</p>
+    <pre># 1 平台后端
+cd "C:\Users\LF\Desktop\law firm platform\backend"
+.\.venv\Scripts\python.exe -m uvicorn kernel.web.app:app --port 8000
+
+# 2 法律检索服务（检索和流程要用）
+cd "C:\Users\LF\Desktop\langchain-legal-RAG"
+.\.venv\Scripts\python.exe -m uvicorn src.service:app --port 8100
+
+# 3 前端
+cd "C:\Users\LF\Desktop\law firm platform\frontend"
+npm run dev</pre>
+    <p>打开 <code>http://localhost:3000</code>，律所编码一律 <code>kangqiao</code>，
+       密码一律 <code>password123</code>。</p>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>账号</th><th>人</th><th>角色</th><th>用来验什么</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">wang</td><td>王建国</td><td>管委会 + 团队负责人</td>
+            <td>权限最全，主线测试用它</td></tr>
+        <tr><td class="mono">li</td><td>李明</td><td>管委会 + 团队负责人</td>
+            <td><b>看不到 AJ2026003</b> —— 被隔离墙挡着，用来验墙</td></tr>
+        <tr><td class="mono">zhang</td><td>张三</td><td>律师</td>
+            <td>数据范围只有自己，用来验权限收窄</td></tr>
+        <tr><td class="mono">qian</td><td>钱芳</td><td>财务</td>
+            <td>业务页基本是空的，用来验角色差异</td></tr>
+        <tr><td class="mono">zhou</td><td>周涛</td><td>行政</td>
+            <td>权限最少</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin-top:9px" class="sub">演示数据：3 个案件（AJ2026001 建工 / AJ2026002 劳动争议 /
+      AJ2026003 运输·待利冲）、7 个主体、3 个客户、2 堵隔离墙。
+      咨询、账单、单据需要自己现造 —— 每次验收后请清掉，别留在演示库里。</p>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="card" id="gaps">
+    <h2>已知欠账（不用测，测了也是没有）</h2>
+    <p class="sub">★ 这一节和上面的清单一样，每步做完都要回来改 ——
+       它上一次失修是从 Step 13 到 Step 18，中间一直写着「文书生成还没做」，
+       而那时文书早就能用了。<b>一份说着假话的欠账清单，比没有更误导。</b></p>
+    <ul>
+      <li><b>法条只有 32 部</b>（另有 998 篇案例）—— 建工和民诉齐全，
+          <b>劳动争议一部都没有</b>。别拿劳动争议案子去跑检索，跑不出东西。</li>
+      <li><b>流程只有建工一条线</b>（<code>construction.dispute</code>），
+          且只有承包人/发包人两个视角。劳动争议的案由上流程模板<b>留空</b> ——
+          那是诚实的空，不是漏配。</li>
+      <li><b>没有主动提醒</b> —— 时限和账款都只有你打开看板才看得见。
+          真要防漏期，这一步早晚要补（用户 2026-08-27 明确说先不做邮件）。</li>
+      <li><b>财务能看全所案件</b>（<code>case.view</code> + 全所范围，Step 2 定的，
+          2026-08-27 确认维持）。单据里看不到案情是<b>结构性</b>隔离，
+          但财务主动点进案件页照样看得到。<b>别把这道墙当成「财务接触不到案情」。</b></li>
+      <li><b>文书不能导出 Word/PDF</b>，只有 Markdown —— 等 Step 19 的 Word 插件。</li>
+      <li><b>单据附件只存了 id</b>，还没接 doc 模块的上传与预览。</li>
+      <li><b>收款账号明文存库</b>，只做了展示层掩码（只有付款人看得到完整号码）。
+          上生产前要加密。</li>
+      <li><b>没有开票</b>（增值税专用发票）对接，只算税不开票。</li>
+      <li><b>8100 端口没有认证</b> —— 本机无所谓，上云前必须设
+          <code>RAG_SERVICE_TOKEN</code>。</li>
+      <li><b>事件总线还是空实现</b> —— 触发条件（模块 &gt; 8）已满足，
+          评估后暂不做，理由见 ARCHITECTURE.md 文末。</li>
+    </ul>
+  </div>
+</main>
+
+<script id="data" type="application/json">
+[
+ {
+  "idx": "01",
+  "name": "identity · 组织与身份",
+  "why": "律所的骨架：谁在所里、归哪个团队、能看多少。所有模块的权限都建在它上面。",
+  "items": [
+   {
+    "id": "id-login",
+    "t": "登录",
+    "s": [
+     "打开 <code>localhost:3000<\/code>",
+     "律所编码 <code>kangqiao<\/code>、账号 <code>wang<\/code>、密码 <code>password123<\/code>",
+     "再用 <code>zhang<\/code> 登一次对比"
+    ],
+    "e": "进入工作台。<b>wang 顶部有「⚙ 所务管理」入口，zhang 没有<\/b> —— 管理入口按权限显示，不是所有人都能看见。",
+    "perm": "—",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "id-org",
+    "t": "组织树",
+    "s": [
+     "⚙ 所务管理 → 组织",
+     "展开康桥律师事务所"
+    ],
+    "e": "四层结构：所 → 管理委员会 / 律师 / 财务部 / 行政部，律师下面挂王XX、李XX、陈XX 三个团队。<b>层级不是写死的<\/b>，用 parent_id 自引用树，律所自己能增删。",
+    "perm": "identity.view",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "id-position",
+    "t": "职级与晋升历史",
+    "s": [
+     "⚙ → 人员，点开张三",
+     "看他的职级记录"
+    ],
+    "e": "张三有<b>两条<\/b>职级记录：2024-01 律师助理、2026-06 合伙人（管委会决议）。<b>晋升是加一条新记录，不是改旧的<\/b> —— 否则历史案件的统计口径会全错。",
+    "perm": "identity.promote",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "id-member",
+    "t": "一人多归属 + 有效期",
+    "s": [
+     "⚙ → 人员，看王建国的归属",
+     "注意每条归属的起止日期"
+    ],
+    "e": "王建国同时在<b>管理委员会<\/b>（主任）和<b>王XX团队<\/b>（负责人）。律所是矩阵结构，一人一部门的假设从一开始就错。区间是<b>左闭右开<\/b>，所以调岗当天不会在新旧两个团队里同时出现。",
+    "perm": "identity.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "id-role",
+    "t": "角色与权限点",
+    "s": [
+     "⚙ → 角色",
+     "点开「律师」和「管委会」对比勾选项"
+    ],
+    "e": "管委会几乎全勾、律师只有自己那摊。<b>业务代码只判断权限点，从不判断角色名<\/b> ——所以律所改角色不用改代码。注意律师<b>没有<\/b> <code>workflow.cancel<\/code>：中止一条走了一半的流程是团队负责人的判断。",
+    "perm": "identity.manage_role",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "id-scope",
+    "t": "数据范围五档",
+    "s": [
+     "用 <code>wang<\/code> 看案件列表，记下几件",
+     "退出，用 <code>zhang<\/code> 登录再看"
+    ],
+    "e": "wang 看到 3 件，zhang 明显更少。数据范围有 SELF / DEPT / DEPT_TREE / CUSTOM / ALL 五档，在 SQL 层过滤，不是前端藏起来。",
+    "perm": "case.view",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "id-wall",
+    "t": "隔离墙：看得见、撤得掉",
+    "s": [
+     "用 <code>li<\/code> 登录，看案件列表",
+     "换 <code>wang<\/code>，打开 AJ2026003 → 利冲检查",
+     "看「本案已生效的隔离墙」那张表"
+    ],
+    "e": "李明<b>看不到 AJ2026003<\/b>（被墙挡住）。wang 能列出这案子上挂了哪些墙、谁设的、什么理由，并能逐堵撤销。<b>墙必须看得见<\/b> —— 看不见的墙没法排查也没法撤。",
+    "perm": "identity.manage_wall",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "id-selfwall",
+    "t": "把自己关在门外的防呆",
+    "s": [
+     "AJ2026003 → 利冲 → 管委会处置",
+     "在隔离墙名单里勾中<b>你自己（你自己）<\/b>那一项"
+    ],
+    "e": "跳出一个必须勾的红色确认框，写明「放行后我将立刻看不到本案」。这是<b>真踩过的坑<\/b>：当初没有它，放行后直接把自己锁死且撤不掉。",
+    "perm": "conflict.decide",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "id-audit",
+    "t": "审计日志",
+    "s": [
+     "⚙ → 角色页底部 / 或直接调 <code>/api/identity/audit<\/code>",
+     "看最近的记录"
+    ],
+    "e": "建人、改权限、跑利冲、放行、设墙、发起流程都有留痕，带操作人和 IP。",
+    "perm": "audit.view",
+    "d": "",
+    "star": false
+   }
+  ]
+ },
+ {
+  "idx": "02",
+  "name": "crm · 客户与当事人",
+  "why": "主体库是全所共用的。利冲能不能查出东西，全看这里的主体和关联方录得准不准。",
+  "items": [
+   {
+    "id": "crm-party",
+    "t": "主体库与名称去重",
+    "s": [
+     "客户页 → 新建主体，输入「宏远建设集团有限公司」",
+     "再输入「宏远建设集团」看提示"
+    ],
+    "e": "提示<b>可能重复<\/b>并列出已有主体。去重是<b>反复剥后缀<\/b>做的：「宏远建设集团有限公司」→「宏远建设集团」→「宏远建设」，一次只剥一层会漏。",
+    "perm": "crm.manage_party",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "crm-relation",
+    "t": "关联方",
+    "s": [
+     "客户页，点开「宏远建设集团有限公司」",
+     "看它的关联方"
+    ],
+    "e": "挂着「宏远建设（青岛）有限公司」。<b>利冲靠它跨案件查<\/b> ——对方是我方客户的子公司，裸比名字是查不出来的。",
+    "perm": "crm.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "crm-client",
+    "t": "客户档案与联系人",
+    "s": [
+     "客户页，看客户编号 KH2024001 / KH2025008 / KH2026003",
+     "点开看联系人"
+    ],
+    "e": "客户和<b>主体是两张表<\/b>：同一个主体可能今天是客户、明天是对方当事人，塞进一张表以后就分不开了。",
+    "perm": "crm.view",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "crm-transfer",
+    "t": "客户移交",
+    "s": [
+     "客户页 → 选一个客户 → 移交给另一位律师"
+    ],
+    "e": "负责人变更并留痕。律师离所、团队调整时用。",
+    "perm": "crm.transfer",
+    "d": "",
+    "star": false
+   }
+  ]
+ },
+ {
+  "idx": "03",
+  "name": "case · 案件与事项",
+  "why": "平台的中心。检索、流程、利冲、文书全都挂在案件下面。",
+  "items": [
+   {
+    "id": "case-list",
+    "t": "案件列表与筛选",
+    "s": [
+     "案件页，按编号/名称搜",
+     "用状态下拉筛选"
+    ],
+    "e": "只显示<b>你的数据范围内<\/b>的案件，不是全所。",
+    "perm": "case.view",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "case-detail",
+    "t": "案件详情",
+    "s": [
+     "点开 AJ2026001"
+    ],
+    "e": "编号、案由、法院、案号、标的额、立案日、案情，以及当事人 / 承办人 / 事项 / 流转记录四块。",
+    "perm": "case.view",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "case-party",
+    "t": "当事人：我方 / 对方",
+    "s": [
+     "AJ2026001 → 当事人一栏"
+    ],
+    "e": "每个当事人标着<b>我方<\/b>或<b>对方<\/b>，并指向全所主体库。利冲就是拿这个字段跨案件比对的。",
+    "perm": "case.view",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "case-matter",
+    "t": "事项",
+    "s": [
+     "AJ2026001 → 事项一栏"
+    ],
+    "e": "一审 / 二审 / 再审 / 执行等程序阶段<b>独立成表<\/b> ——因为它们可以并行（一审在打、财产保全同时在跑）。",
+    "perm": "case.view",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "case-fsm",
+    "t": "状态机：非法流转直接拒绝",
+    "s": [
+     "AJ2026001（办理中）→ 看「推进状态」按钮",
+     "注意只列出了当前允许的下一步"
+    ],
+    "e": "办理中只能到<b>结案中<\/b>或<b>已终止<\/b>，不能跳回待立案。非法流转在后端报错，不靠前端藏按钮。",
+    "perm": "case.manage",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "case-irrev",
+    "t": "不可逆动作要额外权限",
+    "s": [
+     "用 <code>zhang<\/code> 登录看同一个案件",
+     "找带 ⚠ 的按钮"
+    ],
+    "e": "带 ⚠ 的（结案、终止）对没有 <code>case.close<\/code> 的人是<b>灰的<\/b>，鼠标悬停会说要什么权限。",
+    "perm": "case.close",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "case-cause",
+    "t": "案由字典",
+    "s": [
+     "⚙ → 案由"
+    ],
+    "e": "民事/行政/刑事/非诉四大类，建设工程施工合同纠纷等子项。<b>案由决定套哪个流程模板<\/b>，所以要可扩展。",
+    "perm": "case.manage_cause",
+    "d": "",
+    "star": false
+   }
+  ]
+ },
+ {
+  "idx": "04",
+  "name": "conflict · 利冲检查",
+  "why": "执业红线。合规检查第一个要看的就是这里，而且要看留档。",
+  "items": [
+   {
+    "id": "cf-run",
+    "t": "跑一次检查",
+    "s": [
+     "打开 AJ2026003（某公司诉宏远物流）",
+     "利冲检查 → 「跑一次检查」"
+    ],
+    "e": "命中 <b>2 条「需审查」<\/b>：对方宏远物流的关联方「宏远建设集团」是我所客户，而且在 AJ2026001 里在办。<b>裸比名字查不出来<\/b>，是靠关联方展开的。",
+    "perm": "conflict.run",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "cf-level",
+    "t": "命中分级",
+    "s": [
+     "打开 AJ2026001，跑一次检查"
+    ],
+    "e": "出现 <b>阻断<\/b> 级：对方凯达置业<b>就是我所客户<\/b>（KH2025008）。三档：阻断（不能接）/ 需审查（管委会定）/ 提示（旧关系，记录即可）。",
+    "perm": "conflict.run",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "cf-resolve",
+    "t": "逐条处置",
+    "s": [
+     "AJ2026003 → 某条命中 → 「处置」",
+     "写理由保存"
+    ],
+    "e": "理由是<b>内联输入框<\/b>不是弹窗 —— 这句话合规要看，弹窗盛不下也改不了。逐条给理由比整体一句「已确认无冲突」经得起检查。",
+    "perm": "conflict.decide",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "cf-decide",
+    "t": "放行必须写理由",
+    "s": [
+     "AJ2026003 → 「管委会处置」",
+     "理由留空直接点「放行」",
+     "再写上理由重试"
+    ],
+    "e": "空理由<b>被拒<\/b>（前后端各挡一道）。写了理由才放行，并显示「谁 / 何时 / 什么理由」。<b>没有理由的放行等于没做利冲。<\/b>",
+    "perm": "conflict.decide",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "cf-gate",
+    "t": "建案强制卡点",
+    "s": [
+     "找一个还在「利冲审查中」的案件",
+     "试着推进到「待立案」"
+    ],
+    "e": "利冲没过就<b>推不动<\/b>，报「利冲未通过」。这个闸门用<b>可选依赖<\/b>做的：卸掉 conflict 模块，case 照常跑（降级），装上就自动生效。",
+    "perm": "case.manage",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "cf-history",
+    "t": "历史检查记录",
+    "s": [
+     "同一个案件反复跑几次检查",
+     "展开「历史检查记录」"
+    ],
+    "e": "每次都留档，不覆盖。<b>正常行为别当 bug<\/b>：对已在办的案件重跑，会生成一条新的「待管委会」，但<b>不会把案件状态退回去<\/b> ——在办案件不该被一次重跑自动叫停。",
+    "perm": "conflict.view",
+    "d": "",
+    "star": false
+   }
+  ]
+ },
+ {
+  "idx": "05",
+  "name": "retrieval · 法律检索",
+  "why": "接的是独立的 LangGraph 检索服务（:8100）。平台只认 HTTP，那边整个换掉平台也不用改。",
+  "items": [
+   {
+    "id": "rt-search",
+    "t": "纯检索：免费、即时",
+    "s": [
+     "AJ2026001 → 法律检索 → 「检索」模式",
+     "输入「工程款优先受偿权 六个月」"
+    ],
+    "e": "<b>0.1 秒<\/b>出结果，费用 ¥0。走 BM25 + 向量 + RRF 融合，条号精确置顶。",
+    "perm": "retrieval.search",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "rt-noswitch",
+    "t": "纯检索<b>没有<\/b>「带本案背景」开关",
+    "s": [
+     "在「检索」模式下找那个开关"
+    ],
+    "e": "<b>找不到，这是对的。<\/b> A/B 实测传与不传结果完全相同 ——纯检索不经过改写节点。<b>摆一个不起作用的开关比没有更糟<\/b>，所以把这个参数从 API 里删掉了，还加了测试钉死。",
+    "perm": "—",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "rt-ask",
+    "t": "问答：有成本、任务化",
+    "s": [
+     "切到「问答」模式",
+     "问「完工未验收但发包人已实际使用，能否主张工程款？」",
+     "勾上「带本案背景」"
+    ],
+    "e": "约 20 秒、约 ¥0.015。会显示<b>它改写出的检索式<\/b>（原问 + 2 条更精确的），答复里每句结论带【S数字】引用。<b>案件上下文在这条路上才真正生效。<\/b>",
+    "perm": "retrieval.ask",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "rt-status",
+    "t": "引用的时效状态",
+    "s": [
+     "看结果里每条引用右边的标签"
+    ],
+    "e": "「现行有效（2021-01-01 施行）」绿色，失效/废止<b>标红<\/b>。引到已废止的条文是事故，必须一眼能看见。",
+    "perm": "retrieval.search",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "rt-warn",
+    "t": "引用校验告警",
+    "s": [
+     "跑几次问答，留意结果顶部"
+    ],
+    "e": "编造条号、查无此案、已废止会<b>置顶报警<\/b>。这是「敢签字」的地基 ——模型手里只有检索到的东西，编不出来。",
+    "perm": "retrieval.ask",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "rt-hist",
+    "t": "检索历史与花费",
+    "s": [
+     "同一案件下方「本案检索历史」",
+     "点开任意一条"
+    ],
+    "e": "能回看当时的问题、检索式、引用。<b>一次检索只产生一条记录<\/b> ——之前连按回车会冒出五条，是防重复用了 useState 而不是 useRef。",
+    "perm": "retrieval.view",
+    "d": "",
+    "star": false
+   }
+  ]
+ },
+ {
+  "idx": "06",
+  "name": "workflow · 办案流程",
+  "why": "这一步是产品的生死线：让流程替律师决定「该查什么」，而不是给他一个搜索框。",
+  "items": [
+   {
+    "id": "wf-start",
+    "t": "发起建工流程",
+    "s": [
+     "AJ2026001 → 办案流程 → 「发起流程」",
+     "案情栏粘一段<b>详细<\/b>的（含签约/竣工/结算/应付款日期、欠付金额、有无招投标）",
+     "选「承包人」，点「建设工程施工合同纠纷」"
+    ],
+    "e": "立刻返回、状态「推进中」，几秒后停在<b>要素确认<\/b>。流程在后台跑，界面轮询 —— 不会卡死。<br>案情太简略会跑不出东西，默认填的案件 summary 只有一句话，建议自己粘一段。",
+    "perm": "workflow.start",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "wf-elements",
+    "t": "要素抽取 + 律师说了算",
+    "s": [
+     "看它抽出来的要素（工程名称、竣工日期、应付款日期…）",
+     "把「应付款日期」故意改成别的日期",
+     "写一句确认，点「确认并继续」"
+    ],
+    "e": "<b>你改的覆盖机器抽的<\/b>，而且下一步的时限会按你改后的日期重算。机器抽错很正常，关键是人能改、且改了算数。",
+    "perm": "workflow.resume",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "wf-deadline",
+    "t": "时限体检",
+    "s": [
+     "确认要素后看「时限体检」区"
+    ],
+    "e": "工程价款优先受偿权<b>标红<\/b>：「已于 X 届满，超期 N 天，优先受偿权已丧失」，并给出《建工解释一》第四十一条。<b>本地算的，0 成本<\/b>，却是全流程性价比最高的一步 ——这是除斥期间，过期即失权，最容易埋在材料里。",
+    "perm": "workflow.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "wf-issues",
+    "t": "争议焦点由要素定，不是关键词猜",
+    "s": [
+     "看「争议焦点」区，展开任意一项",
+     "看「它替你搜了：」那一行"
+    ],
+    "e": "5 个焦点、15 条检索式，<b>你一个字都没敲<\/b>。焦点是规则从要素推出来的：有招投标才查黑白合同，未验收即使用才查那条。每个焦点都写着「为什么查它」，你能复核。",
+    "perm": "workflow.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "wf-ab",
+    "t": "A/B：和自己搜比一比",
+    "s": [
+     "在下面的「法律检索」框里敲两个字「工程款」，看结果",
+     "回上面对比流程给的依据"
+    ],
+    "e": "裸搜十条里八条是 <code>2023-07-2-115-001<\/code> 这种编号，得一条条点开。流程给的 29 条里，有 26 条是裸搜<b>压根没返回<\/b>的，包括《建工解释一》第二十一条、第二十七条、第三十六条 —— 全是本案要用的。",
+    "perm": "—",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "wf-draft",
+    "t": "起草意见书",
+    "s": [
+     "确认焦点后等约 40-60 秒",
+     "展开「法律意见书草稿」"
+    ],
+    "e": "第一节就是<b>时限问题<\/b>，每个结论带【S数字】引用。全流程花费约 <b>¥0.03<\/b>。模型手里只有检索到的依据，编不出条号。",
+    "perm": "workflow.view",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "wf-signoff",
+    "t": "律师终审 = 责任落点",
+    "s": [
+     "写确认意见，提交",
+     "展开「流转留痕」"
+    ],
+    "e": "每一步谁在什么时候确认了什么，全记着，带 actor。<b>事后追责问的就是「谁点的确认」。<\/b>",
+    "perm": "workflow.resume",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "wf-resume",
+    "t": "关掉浏览器再回来",
+    "s": [
+     "流程停在某个确认点时，直接关掉标签页",
+     "重新打开案件页"
+    ],
+    "e": "流程还在原地等你。状态存在 Postgres 里，不在内存 ——一个建工案子可能跑两个月，中间换人接力、服务器重启都得接得上。",
+    "perm": "workflow.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "wf-cancel",
+    "t": "中止",
+    "s": [
+     "流程进行中点「中止」"
+    ],
+    "e": "状态变「已中止」。<b>只改业务记录，不动 checkpoint<\/b> ——留着，将来复盘「当时跑到哪」还查得到。律师角色<b>没有<\/b>这个权限。",
+    "perm": "workflow.cancel",
+    "d": "",
+    "star": false
+   }
+  ]
+ },
+ {
+  "idx": "07",
+  "name": "doc · 案卷",
+  "why": "案卷里全是扫描件。**搜不到比搜错更危险 —— 搜不到不会引起怀疑**，律师会以为案卷里没有这份材料，而它明明躺在那儿。",
+  "items": [
+   {
+    "id": "doc-upload",
+    "t": "上传材料",
+    "s": [
+     "案件页 → 案卷 → 上传一个 PDF 和一张图片"
+    ],
+    "e": "两个都传上去了，PDF 状态是<b>可检索<\/b>，图片是<b>搜不到<\/b>。",
+    "perm": "doc.upload",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "doc-unsearchable",
+    "t": "搜不到的单独列出来",
+    "s": [
+     "案卷面板顶部看「搜不到的材料」"
+    ],
+    "e": "扫描件、图片<b>单独成一栏<\/b>，不是混在列表里等人自己发现。这一栏为空才说明案卷是可信的。",
+    "perm": "doc.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "doc-version",
+    "t": "版本历史",
+    "s": [
+     "同名文件再传一次",
+     "展开版本历史"
+    ],
+    "e": "生成第 2 版，旧版<b>还能下载<\/b>。案卷材料只增不改。",
+    "perm": "doc.view",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "doc-delete",
+    "t": "删除是软删",
+    "s": [
+     "用 wang 删一份材料",
+     "再恢复"
+    ],
+    "e": "删了看不见但本体还在，能恢复。<b>律师没有 doc.delete<\/b> —— 案卷材料删不得，要删由团队负责人判断。",
+    "perm": "doc.delete",
+    "d": "",
+    "star": true
+   }
+  ]
+ },
+ {
+  "idx": "08",
+  "name": "draft · 文书生成",
+  "why": "无出处的 AI 文书没人敢签字。这一步的全部意义是让每句话可溯源。",
+  "items": [
+   {
+    "id": "draft-sections",
+    "t": "三类章节分开",
+    "s": [
+     "案件页 → 文书 → 新建起诉状"
+    ],
+    "e": "原告/被告是<b>直接填的<\/b>（不过模型），事实与理由是<b>模型写的<\/b>，具状人日期是<b>律师自己写<\/b>。三类分开，因为能不能信任它们的程度不同。",
+    "perm": "draft.create",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "draft-cite",
+    "t": "引用可点开",
+    "s": [
+     "生成事实与理由",
+     "点正文里的【S1】"
+    ],
+    "e": "弹出原文出处。<b>点不开的引用等于没有引用。<\/b>",
+    "perm": "citation.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "draft-nocite",
+    "t": "诉讼请求不要求引用",
+    "s": [
+     "看诉讼请求那一节有没有「没有引用任何依据」的警告"
+    ],
+    "e": "<b>不该有<\/b>。诉请本来就不需要引法条，在这儿报警会让律师习惯性忽略所有警告 —— <b>噪音会吃掉真警报<\/b>。",
+    "perm": "—",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "draft-finalize",
+    "t": "定稿硬拦",
+    "s": [
+     "把某一节改成「这些是编的」再定稿"
+    ],
+    "e": "<b>拦下来<\/b>，说明哪一节有问题。",
+    "perm": "draft.finalize",
+    "d": "",
+    "star": false
+   }
+  ]
+ },
+ {
+  "idx": "09",
+  "name": "task · 时限与待办",
+  "why": "漏一次时限赔执业险。这一块的原则是：**宁可刺眼地说「我算不出」，也不给一个看起来很安心的绿色。**",
+  "items": [
+   {
+    "id": "task-gen",
+    "t": "按规则生成",
+    "s": [
+     "案件页 → 时限与待办 → 按规则生成"
+    ],
+    "e": "按案由和当事人角色生成一份时限清单，全部带<b>未确认<\/b>标记。",
+    "perm": "task.deadline",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "task-unknown",
+    "t": "算不出要点名缺哪个日期",
+    "s": [
+     "看起算那一列"
+    ],
+    "e": "显示<b>「缺『应付款日期』」<\/b>，不是空白，也不是干巴巴一句「算不出」。留空会被读成「没事」。",
+    "perm": "task.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "task-nofixed",
+    "t": "「无固定期间」和「算不出」是两回事",
+    "s": [
+     "找「地基基础与主体结构质量责任」那行"
+    ],
+    "e": "状态是<b>无固定期间<\/b>不是「算不出」，排在最后，<b>不进顶部红色计数<\/b>。它没有可加的期间，催也没用 —— 一条永远变不绿的红字会把真警报一起拖下水。",
+    "perm": "task.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "task-fatal",
+    "t": "除斥期间不给中断按钮",
+    "s": [
+     "展开「工程价款优先受偿权行使期限」的详情"
+    ],
+    "e": "<b>根本没有「登记中断」这个按钮<\/b>（不是灰掉），并写明是除斥期间。灰掉的按钮会让人以为「权限够的人就能点」，而这跟权限无关。",
+    "perm": "task.deadline",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "task-cap",
+    "t": "20 年顶不穿",
+    "s": [
+     "「工程款请求权诉讼时效」起算日填 2006-03-01 确认",
+     "中断于 2025-03-01"
+    ],
+    "e": "届满日<b>停在 2026-03-01<\/b>（不是 2028），标<b>已封顶<\/b>，并写明「再发生中断也不会往后延」。不设上限的话，每年发一次催款函能让系统一路显示「正常」到第 21 年。",
+    "perm": "task.deadline",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "task-suspend",
+    "t": "中止和中断算法相反",
+    "s": [
+     "「普通诉讼时效」起算日 2023-01-10 确认（届满 2026-01-10）",
+     "中止事由消除于填 2025-12-20"
+    ],
+    "e": "届满日变成 <b>2026-06-20<\/b> —— 消除日起<b>满六个月<\/b>，不是「暂停多久推多久」。中断是整个重来，中止只保证还有半年，填错一个结论差好几年。",
+    "perm": "task.deadline",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "task-board",
+    "t": "待办看板的排序",
+    "s": [
+     "顶部导航 → 待办"
+    ],
+    "e": "顺序是<b>已过期 → 算不出 → 临近 → 正常<\/b>。「算不出」排在「临近」前面是刻意的：临近的至少系统在盯，<b>算不出的没人在盯<\/b>。",
+    "perm": "task.view",
+    "d": "",
+    "star": true
+   }
+  ]
+ },
+ {
+  "idx": "10",
+  "name": "consult · 法律咨询",
+  "why": "★ 这一节整个换过。原来是「time · 计时」—— 一整套工时制度（计时器、补录、审批、漏记反查）。2026-08-28 拆掉了：中国的提成制律所团队成员和助理拿工资或分成，时间不换算成客户账单。真正按小时收钱的只有法律咨询。",
+  "items": [
+   {
+    "t": "记一次咨询，当场看见取整",
+    "how": [
+     "客户页 → 建一个客户（或用现成的）",
+     "案件页 → 法律咨询 → + 记一次咨询",
+     "时长填 <b>65</b> 分钟，单价 1000"
+    ],
+    "e": "保存前就显示「按 <b>30 分钟<\/b>取整 → 1.5 小时 × ¥1000 = <b>¥1500.00<\/b>」。★ 半小时取整必须<b>让人看见<\/b> —— 不然客户问起来律师自己都说不清。（不是工时那种 6 分钟制：报一个 1.3 小时的数字只会让客户觉得你在抠。）",
+    "perm": "consult.log",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "聊十分钟不收钱",
+    "how": ["同上，时长填 <b>10<\/b> 分钟"],
+    "e": "金额 <b>¥0.00<\/b>，提示「不足 15 分钟，不计费」。见面寒暄二十分钟就开账单，客户不会有第二次。",
+    "perm": "consult.log",
+    "d": "",
+    "star": false
+   },
+   {
+    "t": "免费咨询必须写原因",
+    "how": ["勾上「免费」，<b>不填原因<\/b>直接保存"],
+    "e": "被拦，提示要写明（首次面谈 / 老客户 / 未成案）。★ <b>不写理由的免费，事后分不清是优惠还是漏收。<\/b>",
+    "perm": "consult.log",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "输错防护",
+    "how": ["时长填 <b>600<\/b> 分钟"],
+    "e": "被拦：「一次咨询记了 10.0 小时 —— 多半是填错了。分成几条记，或者确认一下时长。」★ 报错要<b>给出路<\/b>，不是光说不行。",
+    "perm": "consult.log",
+    "d": "",
+    "star": false
+   },
+   {
+    "t": "没立案也能记",
+    "how": [
+     "顶部导航 → <b>咨询<\/b>",
+     "看「没立案的」那一格"
+    ],
+    "e": "咨询挂<b>客户<\/b>，案件<b>选填<\/b>。多数咨询发生在立案之前甚至根本不立案 —— 只能挂案件的话，「来聊一下、收 1500、没接案」这种最典型的情况记不进去。★ 「没立案的」那一栏值得盯：咨询过但没成案的人，是最现成的案源。",
+    "perm": "consult.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "拉进账单",
+    "how": [
+     "案件页 → 收费与账单 → 新建账单",
+     "点「<b>拉入咨询<\/b>」"
+    ],
+    "e": "只拉<b>没出过账、非免费<\/b>的。金额<b>不重算<\/b> —— 用记录时钉死的价（费率以后调价，去年那条咨询不该跟着变）。免费的、已出账的都拉不进来，这条规则归 consult 判，billing 不该知道。",
+    "perm": "billing.manage",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "出账后改不动",
+    "how": ["把上面那张账单<b>开出<\/b>，回到咨询面板"],
+    "e": "那条咨询变成「<b>已出账<\/b>」并显示账单号，作废按钮消失。改不了了 —— 已经报给客户的数字不能事后悄悄改，要改只能作废重记。",
+    "perm": "consult.log",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "律师只看得到自己的",
+    "how": ["用 <code>zhang<\/code> 登录 → 咨询"],
+    "e": "看不到别人的咨询记录。★ 咨询摘要里写着当事人来说了什么 —— 那是隔离墙挡的东西，<b>不能从咨询表这个后门漏出去<\/b>。",
+    "perm": "consult.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "财务能看不能记",
+    "how": ["用 <code>qian<\/code> 登录 → 咨询"],
+    "e": "看得到全所咨询（要出账单），但<b>没有「记一次咨询」按钮<\/b>。记咨询是业务动作 —— 财务代记就说不清这一小时是谁聊的了。",
+    "perm": "consult.view_all",
+    "d": "",
+    "star": false
+   },
+   {
+    "t": "工时真的没了",
+    "how": ["浏览器打开 <code>/timesheet<\/code>；导航栏找「工时」"],
+    "e": "页面不存在，导航里没有「工时」，接口 <code>/api/time/policy<\/code> 返回 <b>404<\/b>。★ 拆一个模块 = 删目录；<code>time<\/code> 只被 billing 一处 <code>optional_api<\/code> 引用，所以其他 14 个模块一行没动。",
+    "perm": "",
+    "d": "",
+    "star": true
+   }
+  ]
+ },
+ {
+  "idx": "11",
+  "name": "billing · 账单",
+  "why": "算错一分钱财务要找半天；**算错一个百分点可能是违规收费**。",
+  "items": [
+   {
+    "id": "bill-risk-block",
+    "t": "刑事/行政禁止风险代理",
+    "s": [
+     "刑事案件 → 收费与账单 → 签收费约定 → 选「风险代理」"
+    ],
+    "e": "立刻弹<b>红框<\/b>「这个案子不能做风险代理」，带《律师服务收费管理办法》<b>第十二条<\/b>，保存按钮<b>禁用<\/b>。这不是所里的规矩，是规章。",
+    "perm": "billing.manage",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "bill-risk-confirm",
+    "t": "劳动争议要律师确认",
+    "s": [
+     "劳动争议案件 → 同上"
+    ],
+    "e": "弹<b>黄框<\/b>：禁的是「请求支付劳动报酬」这个<b>诉讼请求<\/b>，不是案由本身。要勾选「我已核对本案诉请不含上述禁区」才能保存，<b>这一确认会记录在案<\/b>。系统看不到具体诉请，装作知道比不知道更危险。",
+    "perm": "billing.manage",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "bill-cap",
+    "t": "30% 上限",
+    "s": [
+     "风险比例填 35"
+    ],
+    "e": "红框，带<b>第十三条<\/b>。上限的基数是标的额且<b>不含代垫费用<\/b> —— 把诉讼费算进基数会把上限撑大，那是超收。",
+    "perm": "billing.manage",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "bill-tax",
+    "t": "含税报价不会被再计一次税",
+    "s": [
+     "签固定费约定：包干价 106000，勾选「报价含税」",
+     "新建账单 → 按约定开固定费"
+    ],
+    "e": "账单行是 <b>100000<\/b>（不含税），合计回到 <b>106000<\/b>，不是 112360。「这个价含不含税」是律所收费纠纷的前三名。",
+    "perm": "billing.manage",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "bill-disb",
+    "t": "代垫不计增值税",
+    "s": [
+     "账单上加一行代垫费用 5000，另有律师费 10000"
+    ],
+    "e": "税只按 10000 算 = <b>600<\/b>，合计 15600。代垫是替客户垫的钱，原价转付，一起计税等于凭空多收客户一笔。",
+    "perm": "billing.manage",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "bill-mode-amount",
+    "t": "★ 每个收费模式都填得了钱",
+    "s": [
+     "案件页 → 收费与账单 → 签收费约定",
+     "把<b>五个模式挨个切一遍<\/b>"
+    ],
+    "e": "每个模式都有一个能填金额的地方：包干价 / 年度顾问费 / 基础费＋风险比例 / 咨询单价。★ 原来默认是「计时收费」，而那个模式<b>只有一个「封顶价（可空）」<\/b> —— 用户的原话是「只能填类型，不能填金额，如何算钱呢」。<b>一个填不了钱的收费约定，等于没约定。<\/b>默认已改成「固定收费」。",
+    "perm": "billing.manage",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "bill-pull",
+    "t": "从咨询开账单",
+    "s": [
+     "先在案件里记几条咨询",
+     "账单 → 拉入咨询"
+    ],
+    "e": "每条咨询一行，摘要<b>直接用咨询记录里那句话<\/b>（那句话本来就是写给客户读的），并留着原始记录号（<code>C123<\/code>）—— 客户质疑某一行时能翻回去。金额<b>不重算<\/b>，用记录时钉死的价。",
+    "perm": "billing.manage",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "bill-prefix",
+    "t": "混着咨询和代垫的账单开得出去",
+    "s": [
+     "同一张账单：拉入咨询 + 拉入代垫",
+     "开出"
+    ],
+    "e": "★ <b>不该炸。<\/b><code>source_entry_ids<\/code> 里混着几种前缀（<code>C<\/code>=咨询、<code>D<\/code>=代垫）。第一版无差别 <code>int()<\/code> 一遍，一张带代垫的账单<b>直接 ValueError 开不出去<\/b> —— 而这恰恰是最常见的一种账单。现在只挑自己认识的前缀，<b>不认识的一律跳过<\/b>，绝不假设「剩下的都是我的」。",
+    "perm": "billing.issue",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "bill-lock",
+    "t": "开出即锁死",
+    "s": [
+     "开出账单后再想加一行"
+    ],
+    "e": "<b>改不了<\/b>，并指出出口是红冲后重开。改一张已经发出去的账单，等于两份文件在世上打架。",
+    "perm": "billing.issue",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "bill-aging",
+    "t": "账龄，不是总额",
+    "s": [
+     "顶部导航 → 账款"
+    ],
+    "e": "主角是<b>账龄分布<\/b>。一笔挂了 200 天的应收和一笔上周开的同额账单是两回事；只显示「应收合计」的看板让烂账和正常在途的钱长得一样。逐笔按账龄倒序 —— 催款就该按这个顺序打电话。",
+    "perm": "billing.view",
+    "d": "",
+    "star": true
+   }
+  ]
+ },
+ {
+  "idx": "12",
+  "name": "approval · 单据流转",
+  "why": "**财务只看得到单据和金额，看不到案情。** 不然一张请款单用邮件发发也就完了。",
+  "items": [
+   {
+    "id": "appr-leak",
+    "t": "事由里写案件名被拦",
+    "s": [
+     "顶部导航 → 单据 → 提单 → 请款",
+     "事由填「宏远诉凯达工程款纠纷的鉴定费」"
+    ],
+    "e": "<b>拦下来<\/b>，并给改法（「诉讼费垫付」「鉴定费垫付」）。这一栏会跟着单子在所里流转，财务、行政、用印管理都看得到。当事人名字同样拦，补充说明也一起查。",
+    "perm": "approval.request",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "appr-hint",
+    "t": "写的当下就提示",
+    "s": [
+     "看事由输入框下面"
+    ],
+    "e": "写着<b>「这一栏财务、行政、用印管理都看得到」<\/b>，并给几个可以直接点的范例。后端那道拦截必然漏（案由、争议焦点系统认不出），漏掉的只能靠人自觉 —— 所以提示和拦截都要有。",
+    "perm": "approval.request",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "appr-payload",
+    "t": "财务看到什么",
+    "s": [
+     "用财务账号打开一张请款单"
+    ],
+    "e": "看得到金额、收款方、事由、审批链和<b>完整收款账号<\/b>（他要付款）；<b>看不到案件名和当事人<\/b> —— 单据上根本没有这些字段。换律师账号看，收款账号是<b>掩码<\/b>的。",
+    "perm": "approval.pay",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "appr-note",
+    "t": "看不到的案件要明说",
+    "s": [
+     "用行政账号打开一张挂了案件的单子"
+    ],
+    "e": "显示一句<b>「本单关联了一个案件，但你没有查看权限。★ 这不是错误」<\/b>，灰蓝色中性框不是警告色。悄悄抹掉的话，人会去问「这是哪个案子的」，然后律师在备注里答了 —— <b>隔离墙就从备注栏漏光了<\/b>。",
+    "perm": "approval.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "appr-split",
+    "t": "批的人和付的人不是同一个",
+    "s": [
+     "财务试着点「通过」",
+     "自己批自己提的单"
+    ],
+    "e": "都<b>拦下来<\/b>。批的是「这钱该不该花」，付的是「钱确实出去了」；同一个人既批又付是财务内控第一条红线。",
+    "perm": "—",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "appr-amount",
+    "t": "金额决定走几道",
+    "s": [
+     "提一张 2000 的请款和一张 8000 的"
+    ],
+    "e": "2000 走<b>一道<\/b>（团队负责人），8000 走<b>两道<\/b>（加管委会）。门槛是所里定的，做成数据 —— 改门槛不用发版。",
+    "perm": "approval.request",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "appr-writeback",
+    "t": "付完款回写代垫",
+    "s": [
+     "财务确认付款",
+     "去案件的账单里点「拉入代垫」"
+    ],
+    "e": "那笔钱<b>自动出现在账单上<\/b>，不计增值税。不这么做，垫钱和开账单差着好几个月，全靠人记得 —— 记漏了律所自己贴。",
+    "perm": "approval.pay",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "appr-seal",
+    "t": "用印超份数被拦",
+    "s": [
+     "提用印单申请 3 份，批完后登记「实际盖了 5 份」"
+    ],
+    "e": "<b>拦下来<\/b>：多盖的那 2 份盖在什么上、给了谁，查不清就是事故。填 2 份正常通过，实际份数记在单子上。",
+    "perm": "approval.seal",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "appr-inbox",
+    "t": "待办按权限不按指派",
+    "s": [
+     "用团队负责人账号看「待我处理」"
+    ],
+    "e": "有权限批这一道的人<b>都<\/b>看得到，自己提的单不在自己待办里。指派到人的做法会卡住：负责人出差三天，所有单子停摆。",
+    "perm": "approval.view",
+    "d": "",
+    "star": true
+   }
+  ]
+ },
+ {
+  "idx": "13",
+  "name": "试用回归（2026-08-28 用户点出来的）",
+  "why": "★ 这一节和别的节不一样：它不是照着功能列的，是<b>用户第一次从头点到尾之后报回来的八个问题</b>。全部真实，而且<b>一个也没被 498 条自动化测试拦住</b> —— 因为它们全在「接口通了但人用不了」这一层。这几条最该定期回归。",
+  "items": [
+   {
+    "t": "登录之后落在工作台",
+    "how": ["退出 → 重新登录"],
+    "e": "落在<b>工作台<\/b>，不是 404。★ 原来跳的是 <code>/org<\/code> —— Step 3 的首页，早就没了。<b>18 步没人碰过登录页<\/b>，所以一直没暴露。",
+    "perm": "",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "★ 看板每个数字点开都对得上",
+    "how": [
+     "工作台 → 记住「在办案件」是几件",
+     "点它"
+    ],
+    "e": "落地页<b>正好列出那么多条<\/b>，顶部横幅写着「正在看：在办案件 · 我的　4 / 10 条」，并有「看全部」的出口。★ 原来 14 个指标只有 4 个落点、都不带筛选 —— 从「12 条算不出」点进去是几十行的全量表，<b>还得自己再找一遍那 12 条<\/b>。",
+    "perm": "analytics.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "「本期回款」不落到讲未收的表上",
+    "how": ["工作台 → 点「本期回款」"],
+    "e": "看到<b>逐笔回款流水<\/b>，底部合计<b>正好等于<\/b>格子里那个数。★ 开票/回款是<b>流量<\/b>，未收是<b>存量<\/b> —— 原来四个都指到应收页，「本期回款 ¥206,000」点进去是一张讲未收的表，两个数字八竿子打不着。",
+    "perm": "billing.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "★ 办案流程的依据点得开",
+    "how": [
+     "案件页 → 办案流程 → 展开任一争议焦点",
+     "点法条编号"
+    ],
+    "e": "展开显示法条库里的<b>现行原文<\/b>；如果现在的时效状态和检索当时不一样，<b>当场标出来<\/b>；查不到就明说查不到（库重建、法条下架都会这样），并退回当时存的快照。★ <b>一条打不开的依据，和没有依据的区别只在于它让人以为查过了。<\/b>",
+    "perm": "retrieval.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "屏幕上每个 S 编号都能点",
+    "how": [
+     "文书 → 起草页签",
+     "点节标题上的「引用 S1、S2」",
+     "再去引用体检那一页点【S2】"
+    ],
+    "e": "都弹出出处卡。★ 原来只有<b>正文里出现过的<\/b>编号能点 —— 这份文书 6 条引用只有 S1 写进了正文，于是用户看到 S2 却点不动，以为坏了。",
+    "perm": "draft.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "同一条引用不会弹两张卡",
+    "how": [
+     "起草页点 S1（卡片弹出）",
+     "切到「逐句核对」，点一句有依据的话"
+    ],
+    "e": "只有<b>一张<\/b>出处卡。★ 原来卡片渲染在页签之外，切页签时它还挂着，另一个组件又弹一张 —— <b>屏幕上两张一模一样的<\/b>。",
+    "perm": "draft.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "★ 建客户真的进客户表",
+    "how": [
+     "客户页 → 新建（默认勾着「同时建成客户」）",
+     "填个名字 → 建立客户"
+    ],
+    "e": "客户表里立刻出现，编号<b>自动生成<\/b>（KH2026-0001）。★ 原来页面上只有「新建主体」，而 <code>createClient<\/code> <b>从头到尾没被调用过<\/b> —— 客户表永远只有种子数据。编号也不该让人自己编：填出来的就是「1」「测试」，那一列随即报废。",
+    "perm": "crm.manage",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "已经在库里的主体补得成客户",
+    "how": ["客户页 → 拉到「主体库里还不是客户的」"],
+    "e": "每行一个「建成客户」，点一下就进客户表。★ 第一版修复<b>只覆盖了「新建」那条路<\/b> —— 已经躺在库里的主体没有任何办法转成客户，而界面上一个字都没解释。<b>这一栏里多数是对方当事人，本来就不该是客户<\/b> —— 主体库存所有当事人（利冲查的是这个），客户只是签了委托的那部分。",
+    "perm": "crm.manage",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "★ 律师的执业资格看得见",
+    "how": ["所务管理 → 人员"],
+    "e": "列表上<b>每个人都带执业状态标签<\/b>（执业中/实习/停止执业/已注销/未登记），过期的另标「证已过期」。★ 不能点进详情才发现证注销了。",
+    "perm": "identity.view",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "注销执业的人挂不了主办",
+    "how": [
+     "把某人的执业状态改成「已注销」",
+     "新建案件时选他当主办律师"
+    ],
+    "e": "被拦。★ <b>职级是所里给的，执业证是司法行政机关给的 —— 两件事，都要查。<\/b>所里能把谁提成合伙人，但提不出一张执业证。<b>已办的案子不动<\/b>（历史要留痕），账号也<b>不停用<\/b>（一停历史全变「未知用户」）。",
+    "perm": "identity.manage",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "证过期只警告不拦人",
+    "how": ["把有效期改成去年的某一天"],
+    "e": "人员页<b>显眼提示去核实<\/b>，但<b>不影响他办案<\/b>。★ 年检晚办几天很常见，把案子卡死没道理。但也不能不说 —— 「执业中」绿标底下压着三年前过期的证，<b>比什么都不显示更糟：它让人以为查过了<\/b>。",
+    "perm": "identity.manage",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "独立律师能建客户，助理不能",
+    "how": [
+     "用独立律师账号 → 客户页 → 新建",
+     "再用律师助理账号试一次"
+    ],
+    "e": "独立律师建得了；助理被拦，提示「未开启可独立承办，让主办律师建，或请所务管理调整职级」。★ <b>角色管按钮，职级管资格<\/b> —— 两人是同一个角色，只能靠职级分。要放开就改一行数据（把助理的「可独立承办」打开）。",
+    "perm": "crm.manage_party",
+    "d": "",
+    "star": true
+   },
+   {
+    "t": "★ 拆过模块之后权限没掉在半路",
+    "how": [
+     "用 <code>li<\/code> 登录 → 导航栏应有「咨询」",
+     "打开它"
+    ],
+    "e": "能用。★ 这条钉住的是一个<b>静默失败<\/b>：<code>time.*<\/code> 改名成 <code>consult.*<\/code> 时代码改了、<b>库里的权限点没改<\/b> —— 角色上挂的还是死代码，新的谁都没有。结果不是报错，是<b>菜单不显示、接口 403，没有任何提示<\/b>。这已经是第二次踩「新库对、老库错」了。",
+    "perm": "consult.view",
+    "d": "",
+    "star": true
+   }
+  ]
+ },
+ {
+  "idx": "14",
+  "name": "平台底座",
+  "why": "你一开始定的铁律：每个结构互相独立、可拆卸。这几条不用点界面，跑命令。",
+  "items": [
+   {
+    "id": "core-test",
+    "t": "全套测试",
+    "s": [
+     "<code>cd backend<\/code>",
+     "<code>.\\.venv\\Scripts\\python.exe -m pytest -q<\/code>"
+    ],
+    "e": "<b>221 passed<\/b>。含利冲、隔离墙、时限计算、流程八步、跨进程恢复。",
+    "perm": "—",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "core-fe-test",
+    "t": "前端测试",
+    "s": [
+     "<code>cd frontend<\/code>",
+     "<code>npm test<\/code>"
+    ],
+    "e": "3 条全过。测的是<b>无限重渲染<\/b> —— 那个让页面一闪一闪、所有面板一起报「连不上后端」的 bug，<code>tsc<\/code> 和 <code>next build<\/code> 都查不出来。",
+    "perm": "—",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "core-boundary",
+    "t": "边界检查",
+    "s": [
+     "<code>.\\.venv\\Scripts\\python.exe -m kernel.cli check<\/code>"
+    ],
+    "e": "「边界检查通过」。三条铁律：kernel 不碰 modules/adapters；modules 之间只能通过 <code>api.py<\/code>；adapters 不碰 modules。<b>CI 必跑，违反即失败。<\/b>",
+    "perm": "—",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "core-modules",
+    "t": "模块清单",
+    "s": [
+     "<code>.\\.venv\\Scripts\\python.exe -m kernel.cli modules<\/code>"
+    ],
+    "e": "7 个模块，各自独占一个 Postgres schema，各自声明依赖。<code>case<\/code> 对 <code>conflict<\/code> 是<b>可选依赖<\/b> —— 卸了照常跑。",
+    "perm": "—",
+    "d": "",
+    "star": false
+   },
+   {
+    "id": "core-purge",
+    "t": "拆下来，再装回去",
+    "s": [
+     "<code>... kernel.cli db purge hello<\/code>",
+     "<code>... kernel.cli db upgrade hello<\/code>"
+    ],
+    "e": "schema 连表带迁移记录一起消失，再 upgrade 能干净重建。<b>「删掉再装回来」才是完整的可拆卸<\/b> —— 只验前半程的话，一个把模块变成一次性的 bug 能活很久（真发生过）。",
+    "perm": "—",
+    "d": "",
+    "star": true
+   },
+   {
+    "id": "core-disable",
+    "t": "禁用一个模块",
+    "s": [
+     "<code>$env:LFP_DISABLED_MODULES=\"workflow\"<\/code> 后重启后端",
+     "看启动日志"
+    ],
+    "e": "workflow 不装载，其余照常。前端流程面板消失，案件页正常。",
+    "perm": "—",
+    "d": "",
+    "star": false
+   }
+  ]
+ }
+]
+</script>
+<script>
+(function(){
+"use strict";
+var MODS = JSON.parse(document.getElementById("data").textContent);
+var KEY="lfp-acceptance-v1", state={}, filter="all";
+try{ state=JSON.parse(localStorage.getItem(KEY))||{} }catch(e){ state={} }
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)) }catch(e){} }
+
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+
+function all(){ var a=[]; MODS.forEach(function(m){ m.items.forEach(function(it){ a.push(it) }) }); return a }
+
+function visible(it){
+  var s=(state[it.id]||{}).v||"";
+  if(filter==="todo") return !s;
+  if(filter==="pass") return s==="pass";
+  if(filter==="fail") return s==="fail";
+  return true;
+}
+
+function render(){
+  var host=document.getElementById("list"), html="", shown=0;
+  MODS.forEach(function(m){
+    var vis=m.items.filter(visible);
+    if(!vis.length) return;
+    html+='<div class="mod"><span class="idx">'+esc(m.idx)+'</span>'+
+          '<h2>'+esc(m.name)+'</h2><p class="why">'+esc(m.why)+'</p></div>';
+    vis.forEach(function(it){
+      shown++;
+      var st=state[it.id]||{}, v=st.v||"";
+      html+='<div class="item'+(v?" s-"+v:"")+'" data-id="'+it.id+'">'+
+        '<div class="item-head"><h3>'+(it.star?'<span class="star">★ </span>':"")+
+        esc(it.t)+'</h3>'+
+        (it.perm?'<span class="perm">'+esc(it.perm)+'</span>':"")+'</div>';
+      if(it.d) html+='<p class="sub" style="margin:4px 0 0">'+esc(it.d)+'</p>';
+      html+='<ol class="steps">'+it.s.map(function(x){return "<li>"+x+"</li>"}).join("")+'</ol>';
+      html+='<div class="expect"><b>应该看到：</b>'+it.e+'</div>';
+      html+='<div class="acts">'+
+        '<button class="act'+(v==="pass"?" on-pass":"")+'" data-v="pass">通过</button>'+
+        '<button class="act'+(v==="fail"?" on-fail":"")+'" data-v="fail">有问题</button>'+
+        '<button class="act'+(v==="skip"?" on-skip":"")+'" data-v="skip">跳过</button>'+
+        '<input class="note" placeholder="备注（有问题时写下现象）" value="'+
+        esc(st.n||"")+'"></div>';
+      html+='</div>';
+    });
+  });
+  host.innerHTML = html || '<p class="empty">这个筛选下没有条目。</p>';
+  var items=all(), done=items.filter(function(it){
+    var v=(state[it.id]||{}).v; return v==="pass"||v==="fail"||v==="skip" }).length;
+  document.getElementById("count").textContent=done+" / "+items.length;
+  document.getElementById("bar").style.width=(items.length?done/items.length*100:0)+"%";
+}
+
+document.getElementById("list").addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest(".act"); if(!b) return;
+  var id=b.closest(".item").getAttribute("data-id"), v=b.getAttribute("data-v");
+  var cur=state[id]||{};
+  cur.v = cur.v===v ? "" : v;
+  state[id]=cur; save(); render();
+});
+document.getElementById("list").addEventListener("input",function(e){
+  if(!e.target.classList.contains("note")) return;
+  var id=e.target.closest(".item").getAttribute("data-id");
+  var cur=state[id]||{}; cur.n=e.target.value; state[id]=cur; save();
+});
+var chips=document.querySelectorAll(".chip[data-f]");
+Array.prototype.forEach.call(chips,function(c){
+  c.addEventListener("click",function(){
+    filter=c.getAttribute("data-f");
+    Array.prototype.forEach.call(chips,function(o){
+      o.setAttribute("aria-pressed", o===c ? "true":"false") });
+    render();
+  });
+});
+document.getElementById("reset").addEventListener("click",function(){
+  state={}; save(); render();
+});
+render();
+})();
+</script>

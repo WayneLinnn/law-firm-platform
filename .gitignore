@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 环境与密钥
+.env
+.env.local
+
+# 数据库数据文件（绝不入库）
+infra/pgdata/
+*.sqlite3
+
+# Node
+node_modules/
+.next/
+dist/
+
+# 编辑器
+.vscode/
+.idea/
+.DS_Store
+
+# MinIO 的对象数据 —— 和 pgdata 一个道理，绝不入库
+infra/miniodata/
+
+# 案卷上传的实际文件
+backend/uploads/

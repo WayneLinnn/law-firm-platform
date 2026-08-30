@@ -1,0 +1,795 @@
+/* =====================================================================
+   律所平台 · 设计系统
+   =====================================================================
+
+   ★ **token 命名照抄 shadcn/ui，实现不引 Tailwind。**
+
+     shadcn 的价值其实是两层：
+       ① **语义 token 体系** —— background/foreground 成对、--radius 派生、
+          明暗只换变量不改组件。这一层是纯约定，可以直接搬。
+       ② Tailwind v4 + Radix 的那套实现 —— 三十来个依赖 + 全量 className 重写。
+
+     这里采用 ①，不引 ②。理由：
+       · shadcn 的组件本来就是**复制进你的代码库**的，不是运行时依赖 ——
+         所以"用 shadcn"从来不等于"装 shadcn"
+       · 这个项目的原则是极小内核，前端至今零运行时依赖（只有 React/Next）
+       · token 名字一致，将来真要上 Radix（做可访问的 Dialog/Popover）能直接接
+
+   ★ 结构照 **Clio**（全球律所管理软件第一）：
+       左侧全局导航 → 案件详情用**页签**，不是一路往下滚。
+     原来案件页把 9 个面板平铺成一根滚动条，要看账单得滚过前面八个。
+
+   ===================================================================== */
+
+/* ---------------------------------------------------------------- 字体 */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap");
+
+/* ---------------------------------------------------------------- token */
+
+:root {
+  /* ★ 颜色用 oklch —— 同一亮度在不同色相下**看起来真的一样亮**，
+       sRGB 里做不到这件事（同 L 的蓝会显著暗于黄）。
+       深浅两套只换这里的值，组件一行不动。 */
+
+  --background:            oklch(0.994 0.001 250);
+  --foreground:            oklch(0.205 0.012 255);
+
+  --card:                  oklch(1 0 0);
+  --card-foreground:       oklch(0.205 0.012 255);
+
+  --popover:               oklch(1 0 0);
+  --popover-foreground:    oklch(0.205 0.012 255);
+
+  /* ★ 主色是**印章红**。这是给中国律所用的系统 ——
+       蓝色是英美法务软件的惯例，照搬过来只会像个翻译版。
+       但红色刺眼，所以它只出现在**选中态、品牌标识、主按钮**上，
+       大面积一律是中性灰。 */
+  --primary:               oklch(0.408 0.148 25.5);
+  --primary-foreground:    oklch(0.985 0.003 250);
+
+  --secondary:             oklch(0.968 0.004 250);
+  --secondary-foreground:  oklch(0.279 0.013 255);
+
+  --muted:                 oklch(0.968 0.004 250);
+  --muted-foreground:      oklch(0.545 0.016 257);
+
+  --accent:                oklch(0.968 0.004 250);
+  --accent-foreground:     oklch(0.279 0.013 255);
+
+  --destructive:           oklch(0.577 0.221 27.3);
+  --destructive-foreground:oklch(0.985 0.003 250);
+
+  --border:                oklch(0.923 0.006 255);
+  --input:                 oklch(0.923 0.006 255);
+  --ring:                  oklch(0.408 0.148 25.5);
+
+  /* ★ 语义色**和主色分开**。
+       "危险"不能借用品牌红 —— 否则一个普通的品牌红按钮看着像在警告，
+       而真正的警告又淹没在同色系里。 */
+  --ok:                    oklch(0.527 0.111 158);
+  --ok-bg:                 oklch(0.958 0.028 158);
+  --warn:                  oklch(0.585 0.128 66);
+  --warn-bg:               oklch(0.962 0.038 76);
+  --bad:                   oklch(0.556 0.207 26);
+  --bad-bg:                oklch(0.957 0.028 20);
+
+  /* 侧栏自成一套 —— 它和内容区的明暗关系是独立的设计决定 */
+  --sidebar:               oklch(0.985 0.002 250);
+  --sidebar-foreground:    oklch(0.279 0.013 255);
+  --sidebar-accent:        oklch(0.955 0.005 255);
+  --sidebar-accent-foreground: oklch(0.205 0.012 255);
+  --sidebar-border:        oklch(0.917 0.006 255);
+
+  --radius: 0.5rem;
+
+  --font-sans: "Inter", "Noto Sans SC", -apple-system, "PingFang SC",
+               "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+
+  /* 尺度。★ OA 是**每天盯八小时**的东西，比营销页密得多 */
+  --nav-w: 216px;
+  --topbar-h: 52px;
+}
+
+/* 派生半径 —— shadcn 的约定 */
+:root {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ★ 三种状态都要覆盖：显式浅色 / 显式深色 / 跟随系统（不打标记）。
+     只写 media query 的话，用户在设置里选了"深色"但系统是浅色时会翻车。 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background:            oklch(0.171 0.011 258);
+    --foreground:            oklch(0.951 0.004 250);
+    --card:                  oklch(0.209 0.012 256);
+    --card-foreground:       oklch(0.951 0.004 250);
+    --popover:               oklch(0.229 0.013 256);
+    --popover-foreground:    oklch(0.951 0.004 250);
+    --primary:               oklch(0.672 0.148 24);
+    --primary-foreground:    oklch(0.171 0.011 258);
+    --secondary:             oklch(0.259 0.014 256);
+    --secondary-foreground:  oklch(0.951 0.004 250);
+    --muted:                 oklch(0.259 0.014 256);
+    --muted-foreground:      oklch(0.676 0.016 257);
+    --accent:                oklch(0.279 0.015 256);
+    --accent-foreground:     oklch(0.951 0.004 250);
+    --destructive:           oklch(0.665 0.185 24);
+    --destructive-foreground:oklch(0.171 0.011 258);
+    --border:                oklch(0.288 0.014 256);
+    --input:                 oklch(0.318 0.015 256);
+    --ring:                  oklch(0.672 0.148 24);
+    --ok:                    oklch(0.723 0.132 158);
+    --ok-bg:                 oklch(0.268 0.043 160);
+    --warn:                  oklch(0.769 0.128 76);
+    --warn-bg:               oklch(0.288 0.048 72);
+    --bad:                   oklch(0.704 0.176 22);
+    --bad-bg:                oklch(0.288 0.062 22);
+    --sidebar:               oklch(0.194 0.012 257);
+    --sidebar-foreground:    oklch(0.902 0.005 250);
+    --sidebar-accent:        oklch(0.259 0.014 256);
+    --sidebar-accent-foreground: oklch(0.985 0.003 250);
+    --sidebar-border:        oklch(0.279 0.014 256);
+  }
+}
+
+:root[data-theme="dark"] {
+  --background:            oklch(0.171 0.011 258);
+  --foreground:            oklch(0.951 0.004 250);
+  --card:                  oklch(0.209 0.012 256);
+  --card-foreground:       oklch(0.951 0.004 250);
+  --popover:               oklch(0.229 0.013 256);
+  --popover-foreground:    oklch(0.951 0.004 250);
+  --primary:               oklch(0.672 0.148 24);
+  --primary-foreground:    oklch(0.171 0.011 258);
+  --secondary:             oklch(0.259 0.014 256);
+  --secondary-foreground:  oklch(0.951 0.004 250);
+  --muted:                 oklch(0.259 0.014 256);
+  --muted-foreground:      oklch(0.676 0.016 257);
+  --accent:                oklch(0.279 0.015 256);
+  --accent-foreground:     oklch(0.951 0.004 250);
+  --destructive:           oklch(0.665 0.185 24);
+  --destructive-foreground:oklch(0.171 0.011 258);
+  --border:                oklch(0.288 0.014 256);
+  --input:                 oklch(0.318 0.015 256);
+  --ring:                  oklch(0.672 0.148 24);
+  --ok:                    oklch(0.723 0.132 158);
+  --ok-bg:                 oklch(0.268 0.043 160);
+  --warn:                  oklch(0.769 0.128 76);
+  --warn-bg:               oklch(0.288 0.048 72);
+  --bad:                   oklch(0.704 0.176 22);
+  --bad-bg:                oklch(0.288 0.062 22);
+  --sidebar:               oklch(0.194 0.012 257);
+  --sidebar-foreground:    oklch(0.902 0.005 250);
+  --sidebar-accent:        oklch(0.259 0.014 256);
+  --sidebar-accent-foreground: oklch(0.985 0.003 250);
+  --sidebar-border:        oklch(0.279 0.014 256);
+}
+
+/* ---------------------------------------------------------------- 基础 */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 { margin: 0; font-weight: 600; line-height: 1.3; }
+h1 { font-size: 20px; }
+h2 { font-size: 17px; }
+h3 { font-size: 15px; }
+h4 { font-size: 13px; }
+p  { margin: 0 0 10px; }
+
+a { color: inherit; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+
+/* ★ 键盘焦点必须看得见。表单密的系统里，用 Tab 走位是熟练用户的常态。 */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* 数字对齐 —— 金额、天数、件数都要能竖着比 */
+.num, td.num, .tabular { font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------- 骨架 */
+
+.app {
+  display: grid;
+  grid-template-columns: var(--nav-w) 1fr;
+  min-height: 100vh;
+}
+
+/* --- 左侧导航（Clio 的做法）---
+   ★ 为什么从顶部导航改成左侧：顶部一排放得下 5–7 项，再多就要挤或者折行。
+     这个系统有 8 个日常入口 + 管理入口，而且**还会长**。
+     左侧是纵向的，加一项只是多一行；还能分组，顶部排一行分不了组。 */
+.nav {
+  grid-column: 1;
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: var(--topbar-h);
+  padding: 0 16px;
+  border-bottom: 1px solid var(--sidebar-border);
+  font-weight: 700;
+  font-size: 14.5px;
+  flex: 0 0 auto;
+}
+.nav-mark {
+  width: 22px; height: 22px; flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 700;
+}
+
+.nav-body { flex: 1 1 auto; padding: 10px 8px; }
+
+/* ★ 分组标题。原来顶部导航把「案件/客户」（实体）和
+     「待办/账款/单据」（跨案件的工作流）混在一排，看不出层次。 */
+.nav-group {
+  padding: 12px 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  text-transform: none;
+}
+.nav-group:first-child { padding-top: 2px; }
+
+.nav a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border-radius: var(--radius-md);
+  color: var(--sidebar-foreground);
+  font-size: 13.5px;
+  font-weight: 500;
+  margin-bottom: 1px;
+}
+.nav a:hover { background: var(--sidebar-accent); text-decoration: none; }
+.nav a.active {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+  font-weight: 600;
+}
+/* 选中时左边一条主色，比整块染色安静得多 */
+.nav a.active { box-shadow: inset 2px 0 0 var(--primary); }
+
+.nav-ico { width: 16px; text-align: center; flex: 0 0 auto; opacity: 0.7; font-size: 14px; }
+.nav a.active .nav-ico { opacity: 1; }
+
+/* 待办数字。★ 只在**大于 0** 时渲染 —— 一个常驻的 0 是纯噪音 */
+.nav-count {
+  margin-left: auto;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 9px;
+  background: var(--bad); color: var(--destructive-foreground);
+  font-size: 11px; font-weight: 600;
+  display: grid; place-items: center;
+  font-variant-numeric: tabular-nums;
+}
+.nav-count.soft { background: var(--muted); color: var(--muted-foreground); }
+
+.nav-foot {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--sidebar-border);
+  padding: 10px;
+}
+.nav-me { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+.nav-avatar {
+  width: 28px; height: 28px; flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--secondary); color: var(--secondary-foreground);
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 600;
+}
+.nav-me-txt { min-width: 0; line-height: 1.25; }
+.nav-me-txt b { display: block; font-size: 13px; }
+.nav-me-txt span {
+  display: block; font-size: 11.5px; color: var(--muted-foreground);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* --- 主区 --- */
+.main { grid-column: 2; min-width: 0; display: flex; flex-direction: column; }
+
+.topbar {
+  height: var(--topbar-h);
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  position: sticky; top: 0; z-index: 20;
+}
+.topbar h1 { font-size: 16px; flex: 0 0 auto; }
+.topbar-sub { color: var(--muted-foreground); font-size: 13px; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+.content { padding: 20px; flex: 1 1 auto; max-width: 1400px; width: 100%; }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+  .nav {
+    position: static; height: auto; flex-direction: row; overflow-x: auto;
+    border-right: none; border-bottom: 1px solid var(--sidebar-border);
+  }
+  .nav-body { display: flex; gap: 2px; padding: 6px; }
+  .nav-group, .nav-foot, .nav-brand { display: none; }
+  .content { padding: 14px; }
+}
+
+/* ---------------------------------------------------------------- 卡片 */
+
+.card {
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 14px;
+}
+.card-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.card-head h3 { flex: 1 1 auto; min-width: 0; }
+.card-desc { color: var(--muted-foreground); font-size: 12.5px; margin-top: 1px; }
+.card-body { padding: 14px 16px; }
+.card-body > :last-child { margin-bottom: 0; }
+/* 表格直接贴边 —— 表格自己有内边距，再套一层就浪费空间了 */
+.card-body.flush { padding: 0; }
+
+.grid { display: grid; gap: 14px; }
+.grid.two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.grid.aside { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+@media (max-width: 1000px) {
+  .grid.two, .grid.aside { grid-template-columns: minmax(0, 1fr); }
+}
+
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row.tight { gap: 6px; }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+
+/* ---------------------------------------------------------------- 按钮 */
+
+/* ★ 按钮只有三档：主 / 次 / 幽灵。**再多一档就没人分得清该点哪个。** */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: var(--primary); color: var(--primary-foreground);
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+  transition: background .12s, border-color .12s, opacity .12s;
+}
+.btn:hover { opacity: .9; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn.secondary {
+  background: var(--secondary); color: var(--secondary-foreground);
+  border-color: var(--border);
+}
+.btn.secondary:hover { background: var(--accent); opacity: 1; }
+
+.btn.ghost { background: transparent; color: var(--foreground); }
+.btn.ghost:hover { background: var(--accent); opacity: 1; }
+
+.btn.danger { background: var(--destructive); color: var(--destructive-foreground); }
+
+.btn.sm { height: 27px; padding: 0 9px; font-size: 12.5px; }
+.btn.icon { width: 32px; padding: 0; }
+
+.linkbtn {
+  background: none; border: none; padding: 0; font: inherit;
+  color: var(--primary); cursor: pointer;
+  text-decoration: underline; text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.linkbtn:hover { text-decoration-style: solid; }
+
+/* ---------------------------------------------------------------- 表单 */
+
+label { display: block; font-size: 12.5px; font-weight: 500; margin: 0 0 4px; }
+label.inline {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin: 0; font-weight: 400;
+}
+
+input[type="text"], input[type="number"], input[type="date"],
+input[type="password"], input:not([type]), select, textarea {
+  width: 100%;
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--foreground);
+  font-family: inherit; font-size: 13px;
+}
+textarea { height: auto; padding: 7px 9px; line-height: 1.55; resize: vertical; }
+input::placeholder, textarea::placeholder { color: var(--muted-foreground); }
+input:disabled, select:disabled, textarea:disabled {
+  background: var(--muted); cursor: not-allowed;
+}
+input[type="checkbox"], input[type="radio"] {
+  width: auto; height: auto; accent-color: var(--primary); margin: 0;
+}
+
+.field { margin-bottom: 11px; }
+.field:last-child { margin-bottom: 0; }
+/* ★ 字段下的说明是**规则解释**，不是装饰 —— 律所的规则太多，
+     不当场说清，用户就会用错然后怪系统 */
+.field-hint { font-size: 12px; color: var(--muted-foreground); margin-top: 4px; }
+
+/* ---------------------------------------------------------------- 表格 */
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+thead th {
+  font-size: 11.5px; font-weight: 600;
+  color: var(--muted-foreground);
+  background: var(--muted);
+  white-space: nowrap;
+  position: sticky; top: 0;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr.click { cursor: pointer; }
+tbody tr.click:hover { background: var(--accent); }
+tbody tr.on { background: var(--accent); box-shadow: inset 2px 0 0 var(--primary); }
+
+.scroll-x { overflow-x: auto; }
+
+/* 键值表：左列是标签 */
+table.kv th {
+  width: 90px; background: none; position: static;
+  font-weight: 500; color: var(--muted-foreground);
+}
+
+.empty {
+  padding: 26px 16px; text-align: center;
+  color: var(--muted-foreground); font-size: 13px;
+}
+
+/* ---------------------------------------------------------------- 页签 */
+
+/* ★ Clio 的核心结构：案件详情用页签。
+     原来 9 个面板平铺成一根滚动条，要看账单得滚过前面八个。 */
+.tabs {
+  display: flex; gap: 2px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  margin-bottom: 14px;
+}
+.tab {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: none; background: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-family: inherit; font-size: 13.5px; font-weight: 500;
+  color: var(--muted-foreground);
+  cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.tab:hover { color: var(--foreground); }
+.tab[aria-selected="true"] {
+  color: var(--foreground); font-weight: 600;
+  border-bottom-color: var(--primary);
+}
+.tab-count {
+  min-width: 17px; padding: 0 5px; border-radius: 9px;
+  background: var(--muted); color: var(--muted-foreground);
+  font-size: 11px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tab-count.bad { background: var(--bad); color: var(--destructive-foreground); }
+
+/* ---------------------------------------------------------------- 标记 */
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 19px; padding: 0 7px;
+  border-radius: 9px;
+  background: var(--secondary); color: var(--secondary-foreground);
+  font-size: 11.5px; font-weight: 500;
+  white-space: nowrap;
+}
+.badge.ok   { background: var(--ok-bg);   color: var(--ok); }
+.badge.warn { background: var(--warn-bg); color: var(--warn); }
+.badge.bad  { background: var(--bad-bg);  color: var(--bad); }
+.badge.brand{ background: var(--primary); color: var(--primary-foreground); }
+.badge.outline { background: none; border: 1px solid var(--border); color: var(--muted-foreground); }
+
+/* ---------------------------------------------------------------- 提示条 */
+
+.alert {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--muted-foreground);
+  border-radius: var(--radius-md);
+  padding: 10px 13px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  background: var(--card);
+}
+.alert.ok   { border-left-color: var(--ok);   background: var(--ok-bg); }
+.alert.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+.alert.bad  { border-left-color: var(--bad);  background: var(--bad-bg); }
+.alert-head { display: flex; gap: 8px; align-items: baseline; }
+.alert-head b { flex: 1 1 auto; }
+.alert p:last-child { margin-bottom: 0; }
+/* 报错常常是多行的（说清为什么 + 怎么办），换行不能被吞掉 */
+.alert .lines { white-space: pre-wrap; }
+
+/* ---------------------------------------------------------------- 指标 */
+
+/* ★ 用 grid 不用 flex-wrap。
+     flex 换行时，落单在最后一行的那一格会被 flex-grow 拉满整行 ——
+     六个格子里第六个变成一条横幅，看着像它特别重要。
+     auto-fill 让每格宽度一致，最后一行**不会拉伸**。 */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+  gap: 10px;
+}
+
+.metric {
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  display: block; color: inherit;
+}
+a.metric:hover {
+  border-color: var(--primary);
+  text-decoration: none;
+  background: var(--accent);
+}
+.metric-n {
+  font-size: 22px; font-weight: 600; line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.metric-n.ok { color: var(--ok); }
+.metric-n.warn { color: var(--warn); }
+.metric-n.bad { color: var(--bad); }
+.metric-l { font-size: 12.5px; color: var(--muted-foreground); margin-top: 2px; }
+/* ★ 能点开的才画箭头 —— 点不开的数字是装饰 */
+a.metric .metric-l::after { content: " →"; opacity: .45; }
+
+/* ---------------------------------------------------------------- 杂项 */
+
+.muted { color: var(--muted-foreground); }
+.small { font-size: 12.5px; }
+.ok   { color: var(--ok); }
+.warn { color: var(--warn); }
+.bad  { color: var(--bad); }
+.grow { flex: 1 1 auto; min-width: 0; }
+.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+/* 条形（案由分布、账龄）*/
+.bar { height: 7px; border-radius: 4px; background: var(--muted); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--primary); border-radius: 4px; }
+.bar > span.ok { background: var(--ok); }
+.bar > span.warn { background: var(--warn); }
+.bar > span.bad { background: var(--bad); }
+
+/* 从看板点进来的横幅 */
+.drillbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  margin-bottom: 14px; padding: 8px 13px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  font-size: 13px;
+}
+
+/* 引用相关 */
+.citemark {
+  display: inline-block;
+  background: var(--primary); color: var(--primary-foreground);
+  border: none; border-radius: 4px;
+  padding: 0 5px; margin: 0 1px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  line-height: 1.5; cursor: pointer; vertical-align: baseline;
+}
+.citelink {
+  background: none; border: none; padding: 0; font: inherit; font-weight: 600;
+  color: var(--primary); text-align: left; cursor: pointer;
+  text-decoration: underline; text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.citelink:hover { text-decoration-style: solid; }
+.citation {
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 9px 11px; margin-bottom: 7px; background: var(--card);
+}
+.citation.stale { border-left: 3px solid var(--bad); }
+.cite-snippet {
+  background: var(--muted); border-radius: var(--radius-sm);
+  padding: 8px 10px; margin-top: 6px;
+  font-size: 12.5px; line-height: 1.6; white-space: pre-wrap;
+}
+.cite-card {
+  border: 1px solid var(--border); border-left: 3px solid var(--primary);
+  border-radius: var(--radius-md); padding: 12px 14px; margin-top: 12px;
+  background: var(--card);
+}
+.cite-card.stale { border-left-color: var(--bad); }
+.cite-sup {
+  background: var(--primary); color: var(--primary-foreground);
+  border-radius: 4px; padding: 0 5px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+}
+.cite-para { line-height: 2; margin: 0; }
+.cite-s { cursor: pointer; border-radius: 3px; padding: 1px 0; }
+.cite-s:hover { background: var(--accent); }
+.cite-s.has { border-bottom: 2px solid var(--ok); }
+.cite-s.flag { border-bottom: 2px dashed var(--warn); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* 说明，不是警报 —— 比如「无固定期间」那种永远不会变绿的状态 */
+.badge.muted { background: var(--muted); color: var(--muted-foreground); }
+
+/* 动作条：这一屏能做什么，放在最上面一行。
+   ★ 窄屏时两栏会塌成一列，动作若在右栏就会沉到底下 —— 而动作是最该先看见的。 */
+.actionbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 9px 13px; margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--muted);
+}
+
+/* ---------------------------------------------------------------- 登录 */
+
+/* ★ 登录页原来靠 `.wrap` 居中，而 `.wrap` 在设计系统重写时被删了 ——
+     整个表单贴到了屏幕最左边。改样式要 grep 一遍谁在用旧类名：
+     最先坏的一定是这种"不在主流程里、平时没人点开"的页面。 */
+.authpage {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--muted);
+}
+.authbox {
+  width: 100%;
+  max-width: 368px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 26px 26px 20px;
+}
+.authbrand {
+  display: flex; align-items: center; gap: 11px;
+  margin-bottom: 20px;
+}
+.authbrand h1 { font-size: 17px; }
+.authbrand .nav-mark { width: 34px; height: 34px; font-size: 16px; }
+.authsubmit { width: 100%; height: 36px; margin-top: 6px; }
+.authfoot { margin: 14px 0 0; line-height: 1.6; }
+
+/* 旧类名的兜底 —— 还有几个页面在用，慢慢迁 */
+.wrap { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+/* 可点的统计格（待办中心用）—— 点了只看那一档 */
+.metricbtn {
+  font: inherit; text-align: left; cursor: pointer;
+  color: inherit; width: 100%;
+}
+.metricbtn:hover { background: var(--accent); border-color: var(--primary); }
+.metricbtn.on {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+  background: var(--accent);
+}
+
+/* ---------------------------------------------------------------- 所务管理 */
+
+/* ★ 和业务区**共用同一套骨架**，只换品牌色 —— 两套布局会慢慢长歪成两个产品。
+     但边界感要留着：这里改的是组织、权限、字典，改错了影响所有人。 */
+.app.admin {
+  --sidebar: var(--muted);
+}
+.app.admin .nav-mark {
+  background: var(--foreground);
+  color: var(--background);
+}
+.app.admin .topbar { border-bottom-color: var(--primary); }
+
+/* 旧的 admin 专用类已经不用了，留个空壳免得漏改的地方塌掉 */
+.top, .admin-body, .admin-nav, .admin-main { }
+
+/* 窄侧栏 + 宽内容（组织树那种）—— 和 .aside 方向相反 */
+.grid.tree { grid-template-columns: minmax(0, 260px) minmax(0, 1fr); }
+@media (max-width: 1000px) {
+  .grid.tree { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* 可折叠的卡片标题 —— 整条可点，不是只有小三角 */
+.sec-toggle {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: none; border: none; padding: 0; margin: 0;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+  min-width: 0;
+}
+.sec-toggle:hover h3 { color: var(--primary); }
+.sec-caret {
+  flex: 0 0 auto; width: 14px; margin-top: 2px;
+  color: var(--muted-foreground); font-size: 11px;
+  transition: transform .12s;
+}
+.sec-caret.open { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .sec-caret { transition: none; } }
+
+/* 案由选择器 —— 408 条四级案由，下拉框装不下 */
+.causepick { position: relative; }
+.causepick-on {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--input); border-radius: var(--radius-md);
+  padding: 6px 8px 6px 10px; background: var(--card);
+}
+.causepick-list {
+  position: absolute; z-index: 40; left: 0; right: 0; top: 100%;
+  margin-top: 4px; max-height: 320px; overflow-y: auto;
+  background: var(--popover); color: var(--popover-foreground);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0,0,0,.14);
+}
+.causepick-item {
+  display: flex; flex-direction: column; gap: 1px;
+  width: 100%; text-align: left;
+  background: none; border: none; border-bottom: 1px solid var(--border);
+  padding: 7px 11px; font: inherit; color: inherit; cursor: pointer;
+}
+.causepick-item:last-child { border-bottom: none; }
+.causepick-item:hover { background: var(--accent); }
+.causepick-more { padding: 8px 11px; border-top: 1px solid var(--border); }

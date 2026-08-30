@@ -1,0 +1,44 @@
+[project]
+name = "lfp-backend"
+version = "0.1.0"
+description = "律所平台后端 —— 极小内核 + 插件化模块"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "SQLAlchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.2",
+    "openai>=1.60",
+    "minio>=7.2",
+    "PyJWT>=2.9",
+    "bcrypt>=4.2",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "httpx2>=0.29",
+    "ruff>=0.4",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["kernel", "modules", "adapters"]
+
+[tool.setuptools.package-data]
+"*" = ["*.mako", "migrations/versions/*.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

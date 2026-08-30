@@ -1,0 +1,36 @@
+# 本地开发环境。数据库数据文件落在 infra/pgdata/，已在 .gitignore 中排除。
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: lfp-postgres
+    environment:
+      POSTGRES_USER: lfp
+      POSTGRES_PASSWORD: lfp
+      POSTGRES_DB: lfp
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lfp"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: lfp-redis
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    container_name: lfp-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: lfp
+      MINIO_ROOT_PASSWORD: lfp123456
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./miniodata:/data
